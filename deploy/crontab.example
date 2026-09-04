@@ -1,0 +1,9 @@
+# Alternative to systemd, if you prefer cron. Install with: crontab -e
+#
+# Every 3 hours at :07. Logs to a file you can tail; cron mails nothing on
+# success because the script is quiet unless something is wrong.
+7 */3 * * * cd /home/tobi/openbrowsertabs/fantasy && /usr/bin/python3 tools/poll_espn.py --commit >> /var/log/ffdraft-poll.log 2>&1
+
+# Optional extra density on NFL Sunday. Times are CET/CEST (German local):
+# 1pm ET kickoff = 7pm CET, and inactives post ~90 minutes before that.
+25,55 17-18 * * 0 cd /home/tobi/openbrowsertabs/fantasy && /usr/bin/python3 tools/poll_espn.py >> /var/log/ffdraft-poll.log 2>&1

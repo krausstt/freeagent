@@ -1,0 +1,3 @@
+# Only one hard dependency. Everything else is stdlib so this runs anywhere,
+# including Termux on Android.
+requests>=2.31.0

@@ -1,0 +1,16 @@
+[Unit]
+Description=Run the ESPN poll every 3 hours
+
+[Timer]
+# Every 3 hours at :07 — off the top of the hour so we are not one of a
+# thousand scrapers hitting ESPN at :00.
+OnCalendar=*-*-* 00/3:07:00
+
+# Catch up after a reboot or suspend instead of silently skipping a run.
+Persistent=true
+
+# Spread the actual start over 4 minutes.
+RandomizedDelaySec=240
+
+[Install]
+WantedBy=timers.target

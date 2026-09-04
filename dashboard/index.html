@@ -1,0 +1,407 @@
+<title>Kreis Liga Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#0A100E; --surface:#131B18; --surface-2:#1B2521; --line:#2A3733;
+  --ink:#EAF0EC; --ink-dim:#8DA096; --ink-faint:#5D6E66;
+  --accent:#7DD8FF; --accent-ink:#06231C;
+  --ok:#56C596; --thin:#FFC048; --short:#FF6B4A;
+  --pos-qb:#C79BF0; --pos-rb:#6FD8A8; --pos-wr:#7DD8FF; --pos-te:#FFC048;
+  --pos-k:#8DA096; --pos-dst:#9AB0F5;
+  --radius:3px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+    --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+    --accent:#0A6E96; --accent-ink:#FFFFFF;
+    --ok:#1E7A55; --thin:#8A5600; --short:#C03A1C;
+    --pos-qb:#6D3AA8; --pos-rb:#126B47; --pos-wr:#0A6E96; --pos-te:#8A5600;
+    --pos-k:#5D6E66; --pos-dst:#3C51A8;
+  }
+}
+:root[data-theme="light"]{
+  --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+  --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+  --accent:#0A6E96; --accent-ink:#FFFFFF;
+  --ok:#1E7A55; --thin:#8A5600; --short:#C03A1C;
+  --pos-qb:#6D3AA8; --pos-rb:#126B47; --pos-wr:#0A6E96; --pos-te:#8A5600;
+  --pos-k:#5D6E66; --pos-dst:#3C51A8;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45;
+  -webkit-text-size-adjust:100%}
+h1,h2,h3,.disp{font-family:"Barlow Condensed","Barlow Semi Condensed",system-ui,sans-serif;
+  font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:820px;margin:0 auto;padding:0 12px 80px}
+.head{padding:16px 0 10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.head h1{font-size:25px;letter-spacing:.02em}
+.head .sub{font-size:12.5px;color:var(--ink-dim);margin-top:2px}
+.eyebrow{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+
+section{margin-top:20px}
+h2{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);
+  margin-bottom:9px}
+
+/* matchup */
+.matchup{border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:var(--radius);
+  background:var(--surface);padding:13px 14px}
+.mrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.mteam{font-size:17px;font-weight:600;font-family:"Barlow Condensed",sans-serif}
+.mscore{font-size:27px;font-weight:600;line-height:1}
+.bar{height:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;
+  overflow:hidden;margin:11px 0 6px;display:flex}
+.bar span{display:block;height:100%}
+.bar .me{background:var(--ok)}
+.bar .them{background:var(--line)}
+.blab{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim)}
+
+/* coverage grid */
+.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table.cov{border-collapse:collapse;width:100%;min-width:560px}
+table.cov th,table.cov td{padding:6px 4px;text-align:center;font-size:12px;
+  border-bottom:1px solid var(--line)}
+table.cov thead th{background:var(--surface-2);font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-faint);font-weight:600;position:sticky;top:0}
+table.cov th.wk{text-align:left;padding-left:10px;font-family:"IBM Plex Mono",monospace;
+  font-weight:500;color:var(--ink-dim);white-space:nowrap}
+table.cov tr:last-child td,table.cov tr:last-child th{border-bottom:none}
+.cell{display:inline-block;min-width:26px;padding:2px 5px;border-radius:var(--radius);
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600}
+.c-ok{color:var(--ok)}
+.c-thin{color:var(--thin);background:color-mix(in srgb,var(--thin) 13%,transparent)}
+.c-short{color:var(--short);background:color-mix(in srgb,var(--short) 17%,transparent)}
+tr.r-short th.wk{color:var(--short);font-weight:700}
+tr.r-thin th.wk{color:var(--thin)}
+td.outs{text-align:left;font-size:11px;color:var(--ink-faint);padding-left:8px;white-space:nowrap}
+
+/* actions */
+.act{border:1px solid var(--line);border-left:2px solid var(--short);border-radius:var(--radius);
+  background:var(--surface);padding:11px 13px;margin-bottom:8px}
+.act.warn{border-left-color:var(--thin)}
+.act h3{font-size:15px;font-family:"Barlow Condensed",sans-serif;letter-spacing:.01em}
+.act p{margin:4px 0 0;font-size:13px;color:var(--ink-dim);line-height:1.45}
+.act .when{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--short)}
+.act.warn .when{color:var(--thin)}
+
+/* roster */
+.rtable{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.rhead,.rrow{display:grid;grid-template-columns:46px minmax(0,1fr) 40px 38px 46px;
+  gap:6px;align-items:center;padding:7px 10px}
+.rhead{background:var(--surface-2);border-bottom:1px solid var(--line);font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.rhead span:nth-child(n+3),.rrow span:nth-child(n+3){text-align:right}
+.rrow{border-bottom:1px solid var(--line);font-size:14px}
+.rrow:last-child{border-bottom:none}
+.rrow.bench{background:var(--surface-2)}
+.slot{font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--ink-faint)}
+.rrow.starter .slot{color:var(--accent)}
+.pname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.pname .q{color:var(--thin);font-size:10px;font-weight:600;margin-left:4px}
+.pos{font-size:10.5px;font-weight:600}
+.pos.QB{color:var(--pos-qb)} .pos.RB{color:var(--pos-rb)} .pos.WR{color:var(--pos-wr)}
+.pos.TE{color:var(--pos-te)} .pos.K{color:var(--pos-k)} .pos.DST{color:var(--pos-dst)}
+.bye{font-size:12px;color:var(--ink-dim);font-family:"IBM Plex Mono",monospace}
+.bye.hot{color:var(--short);font-weight:600}
+.proj{font-size:12.5px;font-family:"IBM Plex Mono",monospace}
+
+/* routine */
+.routine{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+  padding:4px 0}
+.task{display:flex;gap:10px;align-items:flex-start;padding:9px 13px;
+  border-bottom:1px solid var(--line);cursor:pointer;min-height:44px}
+.task:last-child{border-bottom:none}
+.task input{appearance:none;width:17px;height:17px;flex:0 0 auto;margin-top:2px;
+  border:1.5px solid var(--ink-faint);border-radius:var(--radius);background:transparent}
+.task input:checked{background:var(--accent);border-color:var(--accent)}
+.task input:checked+.tbody .tt{text-decoration:line-through;color:var(--ink-faint)}
+.tbody{min-width:0}
+.tt{font-size:14px;font-weight:500;line-height:1.3}
+.td{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.tday{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  margin-bottom:2px}
+
+.watch{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.wcard{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+  padding:9px 11px}
+.wname{font-size:14.5px;font-weight:600;font-family:"Barlow Condensed",sans-serif}
+.wmeta{font-size:11px;color:var(--ink-dim);margin-top:2px;font-family:"IBM Plex Mono",monospace}
+
+.note{font-size:12px;color:var(--ink-faint);line-height:1.55;margin-top:9px}
+.tools{display:flex;gap:6px;margin-top:16px}
+.tool{padding:9px 13px;border:1px solid var(--line);border-radius:var(--radius);font-size:12px;
+  font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);
+  background:var(--surface);min-height:44px}
+.tool:hover{color:var(--ink);border-color:var(--ink-faint)}
+footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--ink-faint);line-height:1.6}
+@media(max-width:460px){
+  .rhead,.rrow{grid-template-columns:40px minmax(0,1fr) 34px 32px 42px}
+  .head h1{font-size:22px}
+}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div class="eyebrow">Kreis Liga · 12 teams · 0.5 PPR</div>
+    <h1>TheRealTobi — Season Command Center</h1>
+    <div class="sub" id="sub">Season opens Thu 10 Sep 2026 · drafted from slot 7</div>
+  </header>
+
+  <section>
+    <h2>Week 1 matchup</h2>
+    <div class="matchup">
+      <div class="mrow">
+        <span class="mteam">TheRealTobi</span>
+        <span class="mscore mono" id="pf">117.5</span>
+      </div>
+      <div class="bar"><span class="me" id="barMe"></span><span class="them" id="barThem"></span></div>
+      <div class="blab"><span id="wp">53% win probability</span><span id="edge">+3.5</span></div>
+      <div class="mrow" style="margin-top:8px">
+        <span class="mteam" style="color:var(--ink-dim)">Team 15 · A. Steinmeier</span>
+        <span class="mscore mono" style="color:var(--ink-dim)" id="pa">114.0</span>
+      </div>
+    </div>
+    <p class="note">ESPN has not populated Week 1 D/ST projections yet — both defenses show 0.3,
+      so the real margin is wider than it looks on both sides.</p>
+  </section>
+
+  <section>
+    <h2>Bye coverage — can you field a lineup?</h2>
+    <div class="gridwrap">
+      <table class="cov">
+        <thead><tr>
+          <th class="wk">Week</th><th>QB</th><th>RB</th><th>WR</th><th>FLEX</th>
+          <th>TE</th><th>D/ST</th><th>K</th><th style="text-align:left">On bye</th>
+        </tr></thead>
+        <tbody id="covBody"></tbody>
+      </table>
+    </div>
+    <p class="note">Each cell is <b>spare players above what the slot requires</b>. Zero means one
+      injury leaves you short. Negative means you cannot fill the slot at all. Weeks not listed
+      have nobody on bye.</p>
+  </section>
+
+  <section>
+    <h2>Do these before you forget</h2>
+    <div id="actions"></div>
+  </section>
+
+  <section>
+    <h2>Roster</h2>
+    <div class="rtable">
+      <div class="rhead"><span>Slot</span><span>Player</span><span>Pos</span><span>Bye</span><span>Wk 1</span></div>
+      <div id="rosterRows"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Weekly routine</h2>
+    <div class="routine" id="routine"></div>
+  </section>
+
+  <section>
+    <h2>Waiver watch</h2>
+    <div class="watch" id="watch"></div>
+    <p class="note">Trending and roster-percentage figures are from the ESPN app at draft close.
+      They move fast — treat them as a starting point, not a live feed.</p>
+  </section>
+
+  <div class="tools">
+    <button class="tool" id="resetBtn">Reset checklist</button>
+    <button class="tool" id="themeBtn">Theme</button>
+  </div>
+
+  <footer>
+    Coverage is computed from your roster's bye weeks against your league's starting slots
+    (QB, RB×2, WR×2, RB/WR flex, TE, D/ST, K). Checklist state is saved on this device only.
+  </footer>
+</div>
+
+<script id="data" type="application/json">{"_source":"ESPN Fantasy app, TheRealTobi (Tobi K), Kreis Liga, read from screenshots 2026-08-30 20:31-20:32.","team":"TheRealTobi","league":"Kreis Liga","season":2026,"seasonStart":"2026-09-10","draftSlot":7,"teamCount":12,"week1":{"opponent":"Team 15 (Adrian Steinmeier)","projFor":117.5,"projAgainst":114.0,"winProbability":0.53},"lineupSlots":{"QB":1,"RB":2,"WR":2,"FLEX":1,"TE":1,"D/ST":1,"K":1},"flexEligible":["RB","WR"],"roster":[{"n":"Jalen Hurts","p":"QB","t":"PHI","bye":10,"w1":20.9,"slot":"QB"},{"n":"Christian McCaffrey","p":"RB","t":"SF","bye":8,"w1":17.4,"slot":"RB","q":true,"risk":"413 touches in 2025, age-30 season. Highest-leverage injury risk on the roster; no handcuff rostered."},{"n":"Omarion Hampton","p":"RB","t":"LAC","bye":7,"w1":17.5,"slot":"RB"},{"n":"Terry McLaurin","p":"WR","t":"WSH","bye":7,"w1":12.6,"slot":"FLEX"},{"n":"Malik Nabers","p":"WR","t":"NYG","bye":8,"w1":14.5,"slot":"WR","q":true,"risk":"ACL ramp-up. Buy-low window if volume is limited early."},{"n":"Emeka Egbuka","p":"WR","t":"TB","bye":10,"w1":13.6,"slot":"WR","q":true},{"n":"Harold Fannin Jr.","p":"TE","t":"CLE","bye":11,"w1":10.4,"slot":"TE"},{"n":"Steelers D/ST","p":"D/ST","t":"PIT","bye":9,"w1":0.3,"slot":"D/ST"},{"n":"Brandon Aubrey","p":"K","t":"DAL","bye":14,"w1":10.3,"slot":"K"},{"n":"Jared Goff","p":"QB","t":"DET","bye":6,"w1":15.5,"slot":"BE"},{"n":"Michael Wilson","p":"WR","t":"ARI","bye":14,"w1":10.6,"slot":"BE"},{"n":"Kyle Monangai","p":"RB","t":"CHI","bye":10,"w1":10.5,"slot":"BE","q":true},{"n":"Jacory Croskey-Merritt","p":"RB","t":"WSH","bye":7,"w1":7.3,"slot":"BE","q":true},{"n":"Hunter Henry","p":"TE","t":"NE","bye":11,"w1":7.8,"slot":"BE"},{"n":"Juwan Johnson","p":"TE","t":"NO","bye":8,"w1":7.7,"slot":"BE"}],"waiverWatch":[{"n":"Najee Harris","p":"RB","rostered":7,"trend":1.4},{"n":"Keaton Mitchell","p":"RB","rostered":18,"trend":1.2},{"n":"Malik Willis","p":"QB","rostered":19,"proj":15},{"n":"Aaron Rodgers","p":"QB","rostered":6,"proj":15}]}</script>
+<script>
+(() => {
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = id => document.getElementById(id);
+const LS = "ffseason.tasks.v1", LS_THEME = "ffseason.theme.v1";
+
+const NEED = D.lineupSlots;
+const R = D.roster;
+
+// ---- matchup bar
+const pf = D.week1.projFor, pa = D.week1.projAgainst;
+$("pf").textContent = pf.toFixed(1);
+$("pa").textContent = pa.toFixed(1);
+$("wp").textContent = Math.round(D.week1.winProbability * 100) + "% win probability";
+$("edge").textContent = (pf - pa >= 0 ? "+" : "") + (pf - pa).toFixed(1);
+$("barMe").style.width = (D.week1.winProbability * 100) + "%";
+$("barThem").style.width = (100 - D.week1.winProbability * 100) + "%";
+
+// ---- coverage: spare players above requirement, per position per week
+function coverage(wk){
+  const avail = {};
+  ["QB","RB","WR","TE","D/ST","K"].forEach(pos => {
+    avail[pos] = R.filter(p => p.p === pos && p.bye !== wk).length;
+  });
+  // Only the positions this league's flex actually accepts may fill it -- a
+  // RB/WR flex and a RB/WR/TE flex draw from different pools.
+  const elig = D.flexEligible || ["RB","WR"];
+  const flex = elig.reduce((s,pos) => s + avail[pos] - (NEED[pos] || 0), 0) - NEED.FLEX;
+  return {
+    QB: avail.QB - NEED.QB, RB: avail.RB - NEED.RB, WR: avail.WR - NEED.WR,
+    FLEX: flex, TE: avail.TE - NEED.TE, "D/ST": avail["D/ST"] - NEED["D/ST"],
+    K: avail.K - NEED.K,
+    out: R.filter(p => p.bye === wk),
+  };
+}
+
+const ORDER = ["QB","RB","WR","FLEX","TE","D/ST","K"];
+// D/ST and K sit at +0 in every ordinary week -- one rostered, one required --
+// so zero there is the normal state, not a warning. Only depth positions earn amber.
+const SINGLE = new Set(["D/ST","K"]);
+const DEPTH = ORDER.filter(k => !SINGLE.has(k));
+const cls = (v, k) => v < 0 ? "c-short" : (v === 0 && !SINGLE.has(k)) ? "c-thin" : "c-ok";
+let rows = "", problems = [];
+
+for (let wk = 1; wk <= 18; wk++){
+  const c = coverage(wk);
+  if (!c.out.length) continue;
+  const worst = Math.min(...ORDER.map(k => c[k]));
+  const depthWorst = Math.min(...DEPTH.map(k => c[k]));
+  const rowCls = worst < 0 ? "r-short" : depthWorst === 0 ? "r-thin" : "";
+  if (worst < 0) problems.push({ wk, c });
+  rows += `<tr class="${rowCls}"><th class="wk">Wk ${wk}</th>` +
+    ORDER.map(k => `<td><span class="cell ${cls(c[k], k)}">${c[k] >= 0 ? "+" : ""}${c[k]}</span></td>`).join("") +
+    `<td class="outs">${c.out.map(p => p.n.split(" ").slice(-1)[0]).join(", ")}</td></tr>`;
+}
+$("covBody").innerHTML = rows;
+
+// ---- action items, derived from the coverage table rather than hand-listed
+const acts = [];
+problems.forEach(({ wk, c }) => {
+  ORDER.forEach(k => {
+    if (c[k] < 0){
+      acts.push({
+        when: `Week ${wk}`, urgent: true,
+        title: `No ${k} — you will start an empty slot`,
+        body: k === "D/ST"
+          ? `Steelers are on bye. Stream a defence off waivers that week; drop your lowest bench piece to make room. Set a reminder for the Tuesday of Week ${wk}.`
+          : k === "K"
+          ? `Aubrey is on bye and Michael Wilson is out the same week. Never carry a second kicker — drop a bench player and stream one. Reminder for the Tuesday of Week ${wk}.`
+          : `Nobody available at ${k}. Pick one up before kickoff.`,
+      });
+    }
+  });
+});
+// The thinnest non-negative week is worth flagging too: no injury slack at all.
+const thin = [];
+for (let wk = 1; wk <= 18; wk++){
+  const c = coverage(wk);
+  if (!c.out.length) continue;
+  const zero = DEPTH.filter(k => c[k] === 0);
+  if (zero.length) thin.push({ wk, zero });
+}
+// Rank by how many depth slots have no slack; ties go to the earliest week.
+thin.sort((a, b) => (b.zero.length - a.zero.length) || (a.wk - b.wk));
+const worstThin = thin[0];
+if (worstThin){
+  const list = worstThin.zero.length > 1
+    ? worstThin.zero.slice(0, -1).join(", ") + " and " + worstThin.zero.slice(-1)
+    : worstThin.zero[0];
+  acts.push({
+    when: `Week ${worstThin.wk}`, urgent: false,
+    title: `Zero slack at ${list}`,
+    body: `Hampton, McLaurin and Croskey-Merritt are all out together. You can just fill the lineup — but a single injury that week leaves a hole. Carry an extra RB through Week ${worstThin.wk} rather than streaming defences early.`,
+  });
+}
+const cmc = R.find(p => p.risk && p.n.includes("McCaffrey"));
+if (cmc) acts.push({
+  when: "Now", urgent: false,
+  title: "No handcuff behind McCaffrey",
+  body: cmc.risk + " He is your RB1 and you carry no San Francisco backup. Put a waiver claim in for whoever is behind him in Week 1 — it is the cheapest insurance on your roster.",
+});
+
+$("actions").innerHTML = acts.map(a => `
+  <div class="act ${a.urgent ? "" : "warn"}">
+    <div class="when">${a.when}</div>
+    <h3>${a.title}</h3>
+    <p>${a.body}</p>
+  </div>`).join("");
+
+// ---- roster
+const SLOT_ORDER = { QB:0, RB:1, WR:2, FLEX:3, TE:4, "D/ST":5, K:6, BE:7 };
+const sorted = R.slice().sort((a,b) =>
+  (SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]) || (b.w1 - a.w1));
+$("rosterRows").innerHTML = sorted.map(p => {
+  const bench = p.slot === "BE";
+  const hot = [9, 14].includes(p.bye);
+  return `<div class="rrow ${bench ? "bench" : "starter"}">
+    <span class="slot">${p.slot}</span>
+    <span class="pname">${p.n}${p.q ? '<span class="q">Q</span>' : ""}</span>
+    <span class="pos ${p.p.replace("/","")}">${p.p}</span>
+    <span class="bye mono ${hot ? "hot" : ""}">${p.bye}</span>
+    <span class="proj mono">${p.w1.toFixed(1)}</span>
+  </div>`;
+}).join("");
+
+// ---- weekly routine
+const TASKS = [
+  { day:"Tuesday", t:"Run waiver claims", d:"Claims process Wednesday morning. Check the trending list first, and drop from your lowest-projection bench piece." },
+  { day:"Wednesday", t:"Check injury designations", d:"Four of your players carry a Q. Confirm practice status before you commit to a lineup." },
+  { day:"Thursday", t:"Lock any TNF starters", d:"Anyone playing Thursday cannot be changed after kickoff." },
+  { day:"Saturday", t:"Set the lineup", d:"Compare each starter against your bench by that week's projection, not by draft position." },
+  { day:"Sunday AM", t:"Final inactive sweep", d:"Inactives post ~90 minutes before kickoff. This is where most points are lost." },
+  { day:"Monthly", t:"Re-check the bye grid", d:"After every add or drop, the coverage above changes. Weeks 9 and 14 are the ones to protect." },
+];
+$("routine").innerHTML = TASKS.map((t,i) => `
+  <label class="task">
+    <input type="checkbox" data-i="${i}">
+    <span class="tbody">
+      <span class="tday">${t.day}</span>
+      <div class="tt">${t.t}</div>
+      <div class="td">${t.d}</div>
+    </span>
+  </label>`).join("");
+
+let done = new Set();
+try { done = new Set(JSON.parse(localStorage.getItem(LS) || "[]")); } catch(e) {}
+document.querySelectorAll(".task input").forEach(el => {
+  el.checked = done.has(Number(el.dataset.i));
+  el.addEventListener("change", () => {
+    el.checked ? done.add(Number(el.dataset.i)) : done.delete(Number(el.dataset.i));
+    try { localStorage.setItem(LS, JSON.stringify([...done])); } catch(e) {}
+  });
+});
+$("resetBtn").onclick = () => {
+  done.clear();
+  try { localStorage.removeItem(LS); } catch(e) {}
+  document.querySelectorAll(".task input").forEach(el => { el.checked = false; });
+};
+
+// ---- waiver watch
+$("watch").innerHTML = (D.waiverWatch || []).map(w => `
+  <div class="wcard">
+    <div class="wname">${w.n} <span class="pos ${w.p}">${w.p}</span></div>
+    <div class="wmeta">${w.rostered}% rostered${w.trend ? " · +" + w.trend.toFixed(1) + " trending" : ""}${w.proj ? " · " + w.proj + " proj" : ""}</div>
+  </div>`).join("");
+
+// ---- theme
+try { const t = localStorage.getItem(LS_THEME); if (t) document.documentElement.setAttribute("data-theme", t); } catch(e) {}
+$("themeBtn").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : cur === "light" ? null : "dark";
+  if (next) document.documentElement.setAttribute("data-theme", next);
+  else document.documentElement.removeAttribute("data-theme");
+  try { next ? localStorage.setItem(LS_THEME, next) : localStorage.removeItem(LS_THEME); } catch(e) {}
+};
+})();
+</script>

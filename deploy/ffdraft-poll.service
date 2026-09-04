@@ -1,0 +1,26 @@
+[Unit]
+Description=Poll ESPN Fantasy and write a league snapshot
+Documentation=https://github.com/krausstt/openbrowsertabs/blob/main/fantasy/docs/PIPELINE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# --- edit these three lines for your machine ---
+User=tobi
+WorkingDirectory=/home/tobi/openbrowsertabs/fantasy
+ExecStart=/usr/bin/python3 tools/poll_espn.py --commit
+
+# Credentials live in the invoking user's ~/.ffdraft.json (mode 0600).
+# Never put espn_s2 or SWID in this file: systemd units are world-readable.
+
+# Cheap hardening. The poll only needs outbound HTTPS and its own repo.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/tobi/openbrowsertabs
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TimeoutStartSec=300

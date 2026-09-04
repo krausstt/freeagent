@@ -1,0 +1,614 @@
+<title>Snake Draft Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#0A100E; --surface:#131B18; --surface-2:#1B2521; --line:#2A3733;
+  --ink:#EAF0EC; --ink-dim:#8DA096; --ink-faint:#5D6E66;
+  --accent:#7DD8FF; --accent-ink:#06231C;
+  --safe:#56C596; --risky:#FFC048; --gone:#FF6B4A;
+  --pos-qb:#C79BF0; --pos-rb:#6FD8A8; --pos-wr:#7DD8FF; --pos-te:#FFC048;
+  --pos-k:#8DA096; --pos-dst:#9AB0F5;
+  --radius:3px; --tap:44px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+  --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+  --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+  --accent:#0A6E96; --accent-ink:#FFFFFF;
+  --safe:#1E7A55; --risky:#9A6206; --gone:#C03A1C;
+  --pos-qb:#6D3AA8; --pos-rb:#126B47; --pos-wr:#0A6E96; --pos-te:#8A5600;
+  --pos-k:#5D6E66; --pos-dst:#3C51A8;
+  }
+}
+:root[data-theme="light"]{
+  --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+  --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+  --accent:#0A6E96; --accent-ink:#FFFFFF;
+  --safe:#1E7A55; --risky:#9A6206; --gone:#C03A1C;
+  --pos-qb:#6D3AA8; --pos-rb:#126B47; --pos-wr:#0A6E96; --pos-te:#8A5600;
+  --pos-k:#5D6E66; --pos-dst:#3C51A8;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.45; -webkit-text-size-adjust:100%;
+}
+h1,h2,h3,.disp{font-family:"Barlow Condensed","Barlow Semi Condensed",system-ui,sans-serif;
+  font-weight:700; letter-spacing:.01em; margin:0; text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:760px;margin:0 auto;padding:0 12px 96px}
+
+/* ---- instrument bar ---- */
+.bar{position:sticky;top:0;z-index:20;background:var(--ground);
+  border-bottom:1px solid var(--line);margin:0 -12px;padding:8px 12px 9px}
+.bar-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bar-title{font-size:19px;letter-spacing:.02em}
+.bar-league{font-size:12px;color:var(--ink-dim);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--line);border:1px solid var(--line);margin-top:8px;border-radius:var(--radius)}
+.gauge{background:var(--surface);padding:6px 8px;min-width:0}
+.gauge-k{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gauge-v{font-size:20px;font-weight:600;line-height:1.15;margin-top:1px}
+.gauge-v small{font-size:11px;color:var(--ink-dim);font-weight:400}
+.gauge.urgent .gauge-v{color:var(--gone)}
+
+/* ---- the pick ---- */
+.pick{border:1px solid var(--line);border-top:2px solid var(--accent);
+  background:var(--surface);border-radius:var(--radius);margin-top:12px;overflow:hidden}
+.pick-head{display:flex;align-items:center;gap:8px;padding:9px 12px 0}
+.pick-eyebrow{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pick-body{padding:2px 12px 12px}
+.pick-name{font-size:31px;line-height:1.05;letter-spacing:.005em}
+.pick-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px;
+  font-size:12px;color:var(--ink-dim)}
+.why{list-style:none;margin:11px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.why li{position:relative;padding-left:14px;font-size:13.5px;color:var(--ink-dim);line-height:1.4}
+.why li::before{content:"";position:absolute;left:0;top:.62em;width:5px;height:1px;background:var(--ink-faint)}
+.why li.hot{color:var(--ink)}
+.why li.hot::before{background:var(--gone);width:7px;height:2px;top:.58em}
+.pick-actions{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+  border-top:1px solid var(--line)}
+.pick-actions button{min-height:var(--tap);background:var(--surface-2);font-size:12px;
+  font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+.pick-actions button:hover{background:var(--line)}
+.btn-mine{color:var(--accent)}
+.btn-gone{color:var(--ink-dim)}
+
+/* ---- filters ---- */
+.filters{display:flex;gap:5px;overflow-x:auto;padding:12px 0 4px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.filters::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:6px 11px;border:1px solid var(--line);border-radius:var(--radius);
+  font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-dim);background:var(--surface);white-space:nowrap;min-height:32px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* ---- board ---- */
+.board{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:8px}
+.board-head,.row{display:grid;
+  grid-template-columns:26px minmax(0,1fr) 44px 50px 50px 54px 84px;
+  align-items:center;gap:6px}
+.board-head{padding:7px 10px;background:var(--surface-2);border-bottom:1px solid var(--line);
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.board-head span:nth-child(n+3){text-align:right}
+.board-head span:last-child{text-align:center}
+.row{padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--line);
+  min-height:var(--tap)}
+.row:last-child{border-bottom:none}
+.row.is-mine{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--accent)}
+.row.is-gone{opacity:.34}
+.rank{font-size:11px;color:var(--ink-faint)}
+.who{min-width:0}
+.who-name{font-size:15px;font-weight:600;line-height:1.2;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;font-family:"Barlow Condensed",sans-serif;letter-spacing:.01em}
+.who-sub{font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;margin-top:1px}
+.pos{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-align:right}
+.pos.QB{color:var(--pos-qb)} .pos.RB{color:var(--pos-rb)} .pos.WR{color:var(--pos-wr)}
+.pos.TE{color:var(--pos-te)} .pos.K{color:var(--pos-k)} .pos[class*="D/ST"]{color:var(--pos-dst)}
+.num{font-size:13px;text-align:right}
+.num.dim{color:var(--ink-dim)}
+.surv{text-align:right;font-size:13px;font-weight:600}
+.surv.s-safe{color:var(--safe)} .surv.s-risky{color:var(--risky)} .surv.s-gone{color:var(--gone)}
+.surv.dim{color:var(--ink-faint);font-weight:400}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.acts button{border:1px solid var(--line);border-radius:var(--radius);font-size:10px;
+  font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);
+  min-height:30px;background:var(--surface-2)}
+.acts button:hover{color:var(--ink);border-color:var(--ink-faint)}
+.acts .a-mine:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ---- roster ---- */
+.roster{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--surface);padding:11px 12px}
+.roster h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
+.slots{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.slot{font-size:11px;padding:3px 8px;border:1px solid var(--line);border-radius:var(--radius);
+  color:var(--ink-dim);font-family:"IBM Plex Mono",monospace}
+.slot.need{border-color:var(--risky);color:var(--risky)}
+.slot.filled{border-color:var(--safe);color:var(--safe)}
+
+/* ---- chrome ---- */
+.banner{margin-top:12px;padding:9px 12px;border:1px solid var(--line);
+  border-left:2px solid var(--risky);border-radius:var(--radius);
+  background:var(--surface);font-size:12.5px;color:var(--ink-dim)}
+.banner b{color:var(--ink);font-weight:600}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.tool{padding:9px 13px;border:1px solid var(--line);border-radius:var(--radius);
+  font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-dim);background:var(--surface);min-height:var(--tap)}
+.tool:hover{color:var(--ink);border-color:var(--ink-faint)}
+.tool.primary{color:var(--accent);border-color:var(--accent)}
+.empty{padding:26px 12px;text-align:center;color:var(--ink-faint);font-size:13px}
+footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--ink-faint);line-height:1.6}
+@media(max-width:480px){
+  .board-head{grid-template-columns:22px minmax(0,1fr) 34px 42px 50px}
+  .board-head .h-adp,.row .num.adp{display:none}
+  .row{
+    grid-template-columns:22px minmax(0,1fr) 34px 42px 50px;
+    grid-template-areas:"rank who pos vorp surv" "gap acts acts acts acts";
+    row-gap:5px;padding-top:7px;padding-bottom:7px;
+  }
+  .row .rank{grid-area:rank}
+  .row .who{grid-area:who}
+  .row .pos{grid-area:pos}
+  .row .num.vorp{grid-area:vorp}
+  .row .surv{grid-area:surv}
+  .row .acts{grid-area:acts}
+  .acts button{min-height:30px;font-size:10.5px}
+  .pick-name{font-size:27px}
+  .gauge-v{font-size:18px}
+}
+@media(max-width:340px){
+  .gauges{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="bar-top">
+      <h1 class="bar-title disp">SNAKE DRAFT COCKPIT</h1>
+      <span class="bar-league" id="leagueName">—</span>
+    </div>
+    <div class="gauges">
+      <div class="gauge"><div class="gauge-k">Pick</div>
+        <div class="gauge-v mono" id="gPick">—</div></div>
+      <div class="gauge"><div class="gauge-k">Yours</div>
+        <div class="gauge-v mono" id="gMine">—</div></div>
+      <div class="gauge" id="gapGauge"><div class="gauge-k">Til next</div>
+        <div class="gauge-v mono" id="gGap">—</div></div>
+      <div class="gauge"><div class="gauge-k">Roster</div>
+        <div class="gauge-v mono" id="gRoster">—</div></div>
+    </div>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    <b>Synthetic demo data.</b> Players are placeholders, not real projections.
+    Run <span class="mono">python3 -m ffdraft.cli export</span> and load the file to draft for real.
+  </div>
+  <div id="srcBanner" class="banner" hidden>
+    <b>Research board.</b> <span id="srcText"></span>
+  </div>
+
+  <section class="pick" id="pickCard" hidden>
+    <div class="pick-head"><span class="pick-eyebrow" id="pickEyebrow">Take now</span></div>
+    <div class="pick-body">
+      <div class="pick-name disp" id="pickName">—</div>
+      <div class="pick-meta" id="pickMeta"></div>
+      <ul class="why" id="pickWhy"></ul>
+    </div>
+    <div class="pick-actions">
+      <button class="btn-mine" id="pickMine">I drafted him</button>
+      <button class="btn-gone" id="pickGone">Someone took him</button>
+    </div>
+  </section>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="board">
+    <div class="board-head">
+      <span>#</span><span>Player</span><span>Pos</span><span>VORP</span>
+      <span class="h-adp">ADP</span><span>Lasts</span><span></span>
+    </div>
+    <div id="rows"></div>
+  </div>
+
+  <section class="roster">
+    <h2>Your roster</h2>
+    <div class="slots" id="slots"></div>
+  </section>
+
+  <div class="tools">
+    <button class="tool primary" id="loadBtn">Load export</button>
+    <button class="tool" id="undoBtn">Undo</button>
+    <button class="tool" id="resetBtn">Reset draft</button>
+    <button class="tool" id="themeBtn">Theme</button>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+
+  <footer>
+    Survival and regret are re-simulated in your browser on every pick, so the
+    board stays honest as the room drafts. VORP and replacement level come from
+    the snapshot. Marks are saved on this device only.
+  </footer>
+</div>
+
+<script id="seedData" type="application/json">{"generatedAt":"2026-08-30T16:52:10.389217+00:00","sourceNote":"User-supplied research briefing, dated 2026-08-30. Projections attributed therein to the FantasyPros half-PPR consensus; ADP to 4for4 multi-site (ESPN/Sleeper/Yahoo), dated 2026-08-28..30.","verificationNote":"NOT independently verified. Every ESPN, FantasyPros and 4for4 host is blocked by this sandbox's egress policy, so these numbers are transcribed from the briefing at face value.","league":{"id":0,"name":"Research board (briefing 2026-08-30)","season":2026,"teamCount":12,"rosterSlots":{"0":1,"2":2,"4":2,"6":1,"23":1,"20":6},"ppr":0.5,"myTeamId":null,"myDraftSlot":7,"rosterSize":13,"dedicatedDemand":{"QB":12,"RB":24,"WR":24,"TE":12,"K":0,"D/ST":0},"flexSlotsPerTeam":1},"replacementLevels":{"QB":307.5,"RB":170.0,"WR":170.0,"TE":135.0},"state":{"league":"Research board (briefing 2026-08-30)","season":2026,"teamCount":12,"picksMade":0,"totalPicks":156,"myNextPick":7,"pickAfterThat":18,"picksUntilNext":10,"mySchedule":[7,18,31,42,55,66,79,90,103,114]},"players":[{"id":1,"name":"Jahmyr Gibbs","pos":"RB","team":"","proj":337.4,"vorp":167.4,"adp":1.0,"tier":1,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":1,"projSource":"briefing","impact":97,"reportTier":"S","note":""},{"id":2,"name":"Bijan Robinson","pos":"RB","team":"","proj":318.4,"vorp":148.4,"adp":2.0,"tier":1,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":2,"projSource":"briefing","impact":96,"reportTier":"S","note":""},{"id":8,"name":"Christian McCaffrey","pos":"RB","team":"","proj":295.4,"vorp":125.4,"adp":6.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":4,"projSource":"briefing","impact":88,"reportTier":"A","note":"FADE vs market: 413 touches in 2025, age-30 season. Briefing says not before ~7-8"},{"id":7,"name":"Jonathan Taylor","pos":"RB","team":"","proj":288.7,"vorp":118.7,"adp":7.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":3,"projSource":"briefing","impact":90,"reportTier":"A","note":""},{"id":4,"name":"Puka Nacua","pos":"WR","team":"","proj":281.3,"vorp":111.3,"adp":4.0,"tier":1,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":2,"projSource":"briefing","impact":94,"reportTier":"S","note":"Groin \u2014 listed questionable on ESPN; briefing keeps him top-4"},{"id":9,"name":"De'Von Achane","pos":"RB","team":"","proj":279.8,"vorp":109.8,"adp":12.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":5,"projSource":"interpolated","impact":88,"reportTier":"A","note":""},{"id":3,"name":"Ja'Marr Chase","pos":"WR","team":"","proj":275.4,"vorp":105.4,"adp":3.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":1,"projSource":"briefing","impact":95,"reportTier":"S","note":"Knee hyperextension; briefing calls it minor, not structural"},{"id":11,"name":"James Cook","pos":"RB","team":"","proj":270.9,"vorp":100.9,"adp":9.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":6,"projSource":"interpolated","impact":86,"reportTier":"A","note":""},{"id":5,"name":"Jaxon Smith-Njigba","pos":"WR","team":"","proj":270.8,"vorp":100.8,"adp":5.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":3,"projSource":"briefing","impact":92,"reportTier":"A","note":""},{"id":13,"name":"Chase Brown","pos":"RB","team":"","proj":261.9,"vorp":91.9,"adp":17.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":7,"projSource":"interpolated","impact":84,"reportTier":"B","note":""},{"id":6,"name":"Amon-Ra St. Brown","pos":"WR","team":"","proj":261.2,"vorp":91.2,"adp":8.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":4,"projSource":"briefing","impact":91,"reportTier":"A","note":""},{"id":10,"name":"CeeDee Lamb","pos":"WR","team":"","proj":253.1,"vorp":83.1,"adp":10.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":5,"projSource":"interpolated","impact":87,"reportTier":"A","note":""},{"id":15,"name":"Derrick Henry","pos":"RB","team":"","proj":253.0,"vorp":83.0,"adp":19.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":8,"projSource":"interpolated","impact":83,"reportTier":"B","note":""},{"id":12,"name":"Drake London","pos":"WR","team":"","proj":244.9,"vorp":74.9,"adp":14.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":6,"projSource":"interpolated","impact":85,"reportTier":"A","note":""},{"id":17,"name":"Kenneth Walker III","pos":"RB","team":"","proj":244.1,"vorp":74.1,"adp":15.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":9,"projSource":"interpolated","impact":82,"reportTier":"B","note":"TARGET \u2014 briefing value pick, aggressive from 20-22"},{"id":14,"name":"Justin Jefferson","pos":"WR","team":"","proj":236.8,"vorp":66.8,"adp":11.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":7,"projSource":"interpolated","impact":83,"reportTier":"B","note":"FADE vs market: QB uncertainty; briefing says not aggressively inside top 10"},{"id":22,"name":"Trey McBride","pos":"TE","team":"","proj":201.6,"vorp":66.6,"adp":24.0,"tier":1,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":1,"projSource":"briefing","impact":79,"reportTier":"B","note":"Elite-TE scarcity window; aggressive from 27-30"},{"id":21,"name":"Saquon Barkley","pos":"RB","team":"","proj":235.2,"vorp":65.2,"adp":21.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":10,"projSource":"interpolated","impact":79,"reportTier":"B","note":""},{"id":35,"name":"Josh Allen","pos":"QB","team":"","proj":372.5,"vorp":65.0,"adp":28.0,"tier":1,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":1,"projSource":"briefing","impact":71,"reportTier":"C","note":"The ONLY QB worth premium \u2014 +65 over QB13. Take at ~30-35, not before"},{"id":25,"name":"Omarion Hampton","pos":"RB","team":"","proj":231.9,"vorp":61.9,"adp":31.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":11,"projSource":"interpolated","impact":77,"reportTier":"C","note":""},{"id":23,"name":"Brock Bowers","pos":"TE","team":"","proj":195.4,"vorp":60.4,"adp":25.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":2,"projSource":"briefing","impact":78,"reportTier":"B","note":""},{"id":16,"name":"A.J. Brown","pos":"WR","team":"","proj":228.7,"vorp":58.7,"adp":20.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":8,"projSource":"interpolated","impact":82,"reportTier":"B","note":"TARGET \u2014 briefing value pick, aggressive from 22-24"},{"id":26,"name":"Ashton Jeanty","pos":"RB","team":"","proj":228.7,"vorp":58.7,"adp":32.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":12,"projSource":"interpolated","impact":76,"reportTier":"C","note":""},{"id":32,"name":"Kyren Williams","pos":"RB","team":"","proj":225.4,"vorp":55.4,"adp":40.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":13,"projSource":"interpolated","impact":72,"reportTier":"C","note":""},{"id":33,"name":"Breece Hall","pos":"RB","team":"","proj":222.2,"vorp":52.2,"adp":33.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":14,"projSource":"interpolated","impact":72,"reportTier":"C","note":""},{"id":18,"name":"Chris Olave","pos":"WR","team":"","proj":220.5,"vorp":50.5,"adp":26.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":9,"projSource":"interpolated","impact":81,"reportTier":"B","note":"TARGET \u2014 aggressive from 30-33"},{"id":34,"name":"Josh Jacobs","pos":"RB","team":"","proj":218.9,"vorp":48.9,"adp":44.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":15,"projSource":"interpolated","impact":71,"reportTier":"C","note":""},{"id":39,"name":"Javonte Williams","pos":"RB","team":"","proj":215.6,"vorp":45.6,"adp":47.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":16,"projSource":"interpolated","impact":69,"reportTier":"D","note":""},{"id":19,"name":"Nico Collins","pos":"WR","team":"","proj":212.4,"vorp":42.4,"adp":23.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":10,"projSource":"interpolated","impact":81,"reportTier":"B","note":""},{"id":42,"name":"Cam Skattebo","pos":"RB","team":"","proj":212.4,"vorp":42.4,"adp":50.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":17,"projSource":"interpolated","impact":67,"reportTier":"D","note":""},{"id":20,"name":"George Pickens","pos":"WR","team":"","proj":210.8,"vorp":40.8,"adp":29.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":11,"projSource":"interpolated","impact":80,"reportTier":"B","note":""},{"id":24,"name":"Rashee Rice","pos":"WR","team":"","proj":209.1,"vorp":39.1,"adp":27.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":12,"projSource":"interpolated","impact":77,"reportTier":"B","note":"R3 ok, do NOT reach before ~22 \u2014 availability risk"},{"id":43,"name":"D'Andre Swift","pos":"RB","team":"","proj":209.1,"vorp":39.1,"adp":52.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":18,"projSource":"interpolated","impact":67,"reportTier":"D","note":""},{"id":27,"name":"Zay Flowers","pos":"WR","team":"","proj":207.5,"vorp":37.5,"adp":34.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":13,"projSource":"interpolated","impact":76,"reportTier":"C","note":""},{"id":41,"name":"Colston Loveland","pos":"TE","team":"","proj":171.8,"vorp":36.8,"adp":38.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":3,"projSource":"briefing","impact":68,"reportTier":"D","note":"TE plan B behind McBride/Bowers"},{"id":28,"name":"Garrett Wilson","pos":"WR","team":"","proj":205.9,"vorp":35.9,"adp":35.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":14,"projSource":"interpolated","impact":75,"reportTier":"C","note":""},{"id":44,"name":"Travis Etienne","pos":"RB","team":"","proj":205.9,"vorp":35.9,"adp":54.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":19,"projSource":"interpolated","impact":66,"reportTier":"D","note":""},{"id":29,"name":"DeVonta Smith","pos":"WR","team":"","proj":204.2,"vorp":34.2,"adp":37.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":15,"projSource":"interpolated","impact":75,"reportTier":"C","note":""},{"id":30,"name":"Malik Nabers","pos":"WR","team":"","proj":202.6,"vorp":32.6,"adp":39.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":16,"projSource":"interpolated","impact":73,"reportTier":"C","note":"ACL ramp \u2014 buy-low candidate post-draft"},{"id":45,"name":"David Montgomery","pos":"RB","team":"","proj":202.6,"vorp":32.6,"adp":56.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":20,"projSource":"interpolated","impact":66,"reportTier":"D","note":""},{"id":31,"name":"Tee Higgins","pos":"WR","team":"","proj":201.0,"vorp":31.0,"adp":36.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":17,"projSource":"interpolated","impact":73,"reportTier":"C","note":""},{"id":50,"name":"Tyler Warren","pos":"TE","team":"","proj":164.7,"vorp":29.7,"adp":61.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":4,"projSource":"interpolated","impact":63,"reportTier":"E","note":""},{"id":36,"name":"Tetairoa McMillan","pos":"WR","team":"","proj":199.4,"vorp":29.4,"adp":45.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":18,"projSource":"interpolated","impact":70,"reportTier":"C","note":""},{"id":48,"name":"Bucky Irving","pos":"RB","team":"","proj":199.3,"vorp":29.3,"adp":57.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":21,"projSource":"interpolated","impact":64,"reportTier":"D","note":""},{"id":37,"name":"Ladd McConkey","pos":"WR","team":"","proj":197.7,"vorp":27.7,"adp":41.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":19,"projSource":"interpolated","impact":70,"reportTier":"D","note":""},{"id":38,"name":"Emeka Egbuka","pos":"WR","team":"","proj":196.1,"vorp":26.1,"adp":42.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":20,"projSource":"interpolated","impact":69,"reportTier":"D","note":"Toe injury \u2014 'hopefully' ready Week 1"},{"id":51,"name":"Quinshon Judkins","pos":"RB","team":"","proj":196.1,"vorp":26.1,"adp":64.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":22,"projSource":"interpolated","impact":63,"reportTier":"E","note":""},{"id":40,"name":"Jaylen Waddle","pos":"WR","team":"","proj":194.5,"vorp":24.5,"adp":43.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":21,"projSource":"interpolated","impact":68,"reportTier":"D","note":"TARGET \u2014 briefing value pick, aggressive from 48-52"},{"id":46,"name":"Terry McLaurin","pos":"WR","team":"","proj":192.8,"vorp":22.8,"adp":51.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":22,"projSource":"interpolated","impact":65,"reportTier":"D","note":""},{"id":65,"name":"George Kittle","pos":"TE","team":"","proj":157.5,"vorp":22.5,"adp":91.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":5,"projSource":"interpolated","impact":55,"reportTier":"E","note":"Achilles recovery, age 33 \u2014 fine at R8/9, do not chase"},{"id":47,"name":"Jameson Williams","pos":"WR","team":"","proj":191.2,"vorp":21.2,"adp":53.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":23,"projSource":"interpolated","impact":65,"reportTier":"D","note":""},{"id":49,"name":"Davante Adams","pos":"WR","team":"","proj":189.6,"vorp":19.6,"adp":59.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":24,"projSource":"interpolated","impact":64,"reportTier":"E","note":""},{"id":72,"name":"Chris Rodriguez Jr.","pos":"RB","team":"","proj":189.6,"vorp":19.6,"adp":127.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":24,"projSource":"interpolated","impact":50,"reportTier":"E","note":"SLEEPER \u2014 briefing's favourite late RB hedge, goal-line upside"},{"id":52,"name":"Rome Odunze","pos":"WR","team":"","proj":187.9,"vorp":17.9,"adp":65.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":25,"projSource":"interpolated","impact":62,"reportTier":"E","note":""},{"id":56,"name":"Lamar Jackson","pos":"QB","team":"","proj":325.0,"vorp":17.5,"adp":46.0,"tier":2,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":2,"projSource":"briefing","impact":60,"reportTier":"E","note":"Only +17.5 over QB13 \u2014 wait for value"},{"id":53,"name":"Christian Watson","pos":"WR","team":"","proj":186.3,"vorp":16.3,"adp":62.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":26,"projSource":"interpolated","impact":62,"reportTier":"E","note":"TARGET \u2014 asymmetric ceiling, aggressive from 68-72"},{"id":73,"name":"Jeremiyah Love","pos":"RB","team":"","proj":186.3,"vorp":16.3,"adp":30.0,"tier":8,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":25,"projSource":"interpolated","impact":38,"reportTier":"E","note":"HARD FADE \u2014 briefing's biggest consensus fade. Crowded backfield; do not force in R2/R3"},{"id":70,"name":"Dalton Kincaid","pos":"TE","team":"","proj":150.4,"vorp":15.4,"adp":113.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":6,"projSource":"interpolated","impact":51,"reportTier":"E","note":"SLEEPER \u2014 TE6 by PPG weeks 1-9 before hamstring. R11+"},{"id":54,"name":"Mike Evans","pos":"WR","team":"","proj":184.7,"vorp":14.7,"adp":63.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":27,"projSource":"interpolated","impact":61,"reportTier":"E","note":"TARGET \u2014 groin called minor, Week 1 planned. Aggressive from 70-75"},{"id":55,"name":"Luther Burden III","pos":"WR","team":"","proj":183.0,"vorp":13.0,"adp":67.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":28,"projSource":"interpolated","impact":61,"reportTier":"E","note":""},{"id":57,"name":"Drake Maye","pos":"QB","team":"","proj":320.4,"vorp":12.9,"adp":58.0,"tier":3,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":3,"projSource":"briefing","impact":60,"reportTier":"E","note":"Excellent wait-QB"},{"id":58,"name":"Marvin Harrison Jr.","pos":"WR","team":"","proj":181.4,"vorp":11.4,"adp":66.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":29,"projSource":"interpolated","impact":59,"reportTier":"E","note":""},{"id":59,"name":"DJ Moore","pos":"WR","team":"","proj":179.8,"vorp":9.8,"adp":49.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":30,"projSource":"interpolated","impact":58,"reportTier":"E","note":"FADE vs market: Buffalo target distribution. Briefing says 60+, not R5"},{"id":62,"name":"DK Metcalf","pos":"WR","team":"","proj":178.2,"vorp":8.2,"adp":76.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":31,"projSource":"interpolated","impact":56,"reportTier":"E","note":""},{"id":61,"name":"Jalen Hurts","pos":"QB","team":"","proj":314.1,"vorp":6.6,"adp":69.0,"tier":4,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":5,"projSource":"interpolated","impact":57,"reportTier":"E","note":""},{"id":66,"name":"Alec Pierce","pos":"WR","team":"","proj":174.9,"vorp":4.9,"adp":95.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":33,"projSource":"interpolated","impact":50,"reportTier":"E","note":""},{"id":60,"name":"Joe Burrow","pos":"QB","team":"","proj":310.9,"vorp":3.4,"adp":60.0,"tier":5,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":4,"projSource":"briefing","impact":58,"reportTier":"E","note":"Ideal value QB"},{"id":67,"name":"Josh Downs","pos":"WR","team":"","proj":173.3,"vorp":3.3,"adp":96.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":34,"projSource":"interpolated","impact":52,"reportTier":"E","note":"Late WR value"},{"id":68,"name":"Stefon Diggs","pos":"WR","team":"","proj":171.6,"vorp":1.6,"adp":97.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":35,"projSource":"interpolated","impact":54,"reportTier":"E","note":"SLEEPER \u2014 briefing recommends R9-10. WR17 in 2025, 2.4 YPRR"},{"id":63,"name":"Tony Pollard","pos":"RB","team":"","proj":170.0,"vorp":0.0,"adp":78.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":23,"projSource":"briefing","impact":52,"reportTier":"E","note":"RB30 \u2014 the replacement-level marker"},{"id":64,"name":"Chris Godwin","pos":"WR","team":"","proj":170.0,"vorp":0.0,"adp":85.0,"tier":9,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":32,"projSource":"briefing","impact":52,"reportTier":"E","note":"WR36 \u2014 the replacement-level marker"},{"id":69,"name":"Brock Purdy","pos":"QB","team":"","proj":307.5,"vorp":0.0,"adp":105.0,"tier":6,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":6,"projSource":"briefing","impact":50,"reportTier":"E","note":"QB13 \u2014 the replacement-level marker. 307.5 pts at ADP 105"},{"id":71,"name":"Isaiah Likely","pos":"TE","team":"","proj":135.0,"vorp":0.0,"adp":116.0,"tier":7,"bye":0,"inj":"ACTIVE","owned":0.0,"draftedBy":null,"draftedAt":null,"posRank":7,"projSource":"briefing","impact":48,"reportTier":"E","note":"TE13 \u2014 the replacement-level marker"}],"recommendations":[]}</script>
+<script>
+(() => {
+"use strict";
+
+// ---------------------------------------------------------------- state
+const LS_MARKS = "ffdraft.marks.v1";
+const LS_DATA  = "ffdraft.data.v1";
+const LS_THEME = "ffdraft.theme.v1";
+
+let DATA = null;
+let marks = new Map();      // playerId -> {m:"gone"|"mine", at:<overall pick>}
+const markOf = id => marks.get(id)?.m;
+let history = [];           // for undo
+let posFilter = "ALL";
+
+// ---------------------------------------------------------------- math
+// Seeded LCG so the numbers do not flicker between renders.
+function rng(seed){ let s = seed >>> 0; return () => (s = (s*1664525 + 1013904223) >>> 0) / 4294967296; }
+function gauss(r){
+  let u = 0, v = 0;
+  while (u === 0) u = r();
+  while (v === 0) v = r();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+const sigmaFor = (adp, slope) => Math.max(4, slope * adp);
+
+function snakePicks(slot, teams, rounds){
+  const out = [];
+  for (let rd = 1; rd <= rounds; rd++){
+    out.push(rd % 2 ? (rd-1)*teams + slot : (rd-1)*teams + (teams - slot + 1));
+  }
+  return out;
+}
+
+/* Joint simulation of the picks between now and your next turn.
+   Sampling every player's realised slot together (rather than multiplying
+   independent probabilities) matters: exactly `gap` players come off the
+   board, so their fates are negatively correlated. */
+function simulateGap(available, gap, slope, sims = 900, cap = 130){
+  const pool = available.slice().sort((a,b) => a.adp - b.adp).slice(0, cap);
+  const survival = new Map(), fallback = new Map();
+  const positions = new Set(available.map(p => p.pos));
+
+  if (!pool.length || gap <= 0){
+    available.forEach(p => survival.set(p.id, 1));
+    positions.forEach(pos => fallback.set(pos,
+      Math.max(0, ...available.filter(p => p.pos === pos).map(p => p.vorp))));
+    return { survival, fallback };
+  }
+
+  // Anyone deeper than the plausible pool always survives and floors the fallback.
+  const deepFloor = new Map();
+  const poolIds = new Set(pool.map(p => p.id));
+  available.forEach(p => {
+    if (!poolIds.has(p.id))
+      deepFloor.set(p.pos, Math.max(deepFloor.get(p.pos) ?? 0, p.vorp));
+  });
+
+  const k = Math.min(gap, pool.length);
+  const counts = new Map(pool.map(p => [p.id, 0]));
+  const fbSum = new Map([...positions].map(pos => [pos, 0]));
+  const r = rng(20260829);
+  const draws = new Array(pool.length);
+
+  for (let s = 0; s < sims; s++){
+    for (let i = 0; i < pool.length; i++){
+      const p = pool[i];
+      draws[i] = [p.adp + gauss(r)*sigmaFor(p.adp, slope), i];
+    }
+    draws.sort((a,b) => a[0] - b[0]);
+    const taken = new Set();
+    for (let i = 0; i < k; i++) taken.add(draws[i][1]);
+
+    const best = new Map(deepFloor);
+    for (let i = 0; i < pool.length; i++){
+      if (taken.has(i)) continue;
+      const p = pool[i];
+      counts.set(p.id, counts.get(p.id) + 1);
+      if (p.vorp > (best.get(p.pos) ?? -Infinity)) best.set(p.pos, p.vorp);
+    }
+    positions.forEach(pos => fbSum.set(pos, fbSum.get(pos) + (best.get(pos) ?? deepFloor.get(pos) ?? 0)));
+  }
+
+  counts.forEach((c, id) => survival.set(id, c / sims));
+  available.forEach(p => { if (!survival.has(p.id)) survival.set(p.id, 1); });
+  fbSum.forEach((sum, pos) => fallback.set(pos, sum / sims));
+  return { survival, fallback };
+}
+
+/* Re-fit the ADP spread to how this specific room is drafting.
+   Uses each player's actual observed draft slot, which is why marks record
+   the pick number they were made at rather than just that they happened. */
+function calibrateSlope(){
+  const byId = new Map(DATA.players.map(p => [p.id, p]));
+  let num = 0, den = 0, n = 0;
+  marks.forEach((mk, id) => {
+    const p = byId.get(id);
+    if (!p || !p.adp || !mk.at) return;
+    num += Math.abs(mk.at - p.adp) * p.adp;
+    den += p.adp * p.adp;
+    n++;
+  });
+  if (n < 12 || den <= 0) return 0.28;
+  return Math.min(0.6, Math.max(0.1, (num/den) * Math.sqrt(Math.PI/2)));
+}
+
+// ---------------------------------------------------------------- derive
+function compute(){
+  const L = DATA.league;
+  const picksMade = marks.size;
+  const rounds = L.rosterSize || 16;
+  const schedule = L.myDraftSlot ? snakePicks(L.myDraftSlot, L.teamCount, rounds) : [];
+  const upcoming = schedule.filter(n => n > picksMade);
+  const myPick = upcoming[0] ?? null;
+  const nextPick = upcoming[1] ?? null;
+  const gap = (myPick && nextPick) ? nextPick - myPick - 1 : 0;
+
+  const available = DATA.players.filter(p => !marks.has(p.id));
+  const mine = DATA.players.filter(p => markOf(p.id) === "mine");
+  const { survival, fallback } = simulateGap(available, gap, calibrateSlope());
+
+  // Which starting slots are still open?
+  const demand = L.dedicatedDemand || {};
+  const perTeam = {};
+  Object.keys(demand).forEach(pos => { perTeam[pos] = Math.round(demand[pos] / L.teamCount); });
+  const have = {};
+  mine.forEach(p => { have[p.pos] = (have[p.pos] ?? 0) + 1; });
+  const need = {};
+  Object.keys(perTeam).forEach(pos => { need[pos] = Math.max(0, perTeam[pos] - (have[pos] ?? 0)); });
+
+  const flexPerTeam = L.flexSlotsPerTeam ?? 0;
+  const flexOwned = mine.filter(p => ["RB","WR","TE"].includes(p.pos)).length;
+  const flexStarters = (perTeam.RB ?? 0) + (perTeam.WR ?? 0) + (perTeam.TE ?? 0);
+
+  const scored = available.map(p => {
+    const surv = survival.get(p.id) ?? 1;
+    const fb = fallback.get(p.pos) ?? 0;
+    const regret = (1 - surv) * Math.max(0, p.vorp - fb);
+    let mult;
+    if ((need[p.pos] ?? 0) > 0) mult = 1.30;
+    else if (["RB","WR","TE"].includes(p.pos) && flexOwned < flexStarters + flexPerTeam) mult = 1.0;
+    else mult = 0.55;
+    const byes = mine.filter(m => m.pos === p.pos && m.bye && m.bye === p.bye).length;
+    return { p, surv, fb, regret, mult, byes,
+             score: p.vorp*mult + regret - 3*byes };
+  }).sort((a,b) => b.score - a.score);
+
+  return { picksMade, myPick, nextPick, gap, mine, need, perTeam, have, scored, rounds };
+}
+
+// ---------------------------------------------------------------- render
+const $ = id => document.getElementById(id);
+const survClass = s => s < 0.30 ? "s-gone" : s < 0.65 ? "s-risky" : "s-safe";
+
+function reasonsFor(c, gap){
+  const out = [];
+  out.push({ t:`Tier ${c.p.tier} ${c.p.pos} — ${Math.round(c.p.vorp)} pts over replacement`, hot:false });
+  if (gap > 0){
+    if (c.surv < 0.25) out.push({ t:`Very unlikely to last — ${Math.round(c.surv*100)}% to reach your next pick`, hot:true });
+    else if (c.surv < 0.55) out.push({ t:`Coin flip to last — ${Math.round(c.surv*100)}% to reach your next pick`, hot:true });
+    else if (c.surv > 0.85) out.push({ t:`Safe to wait — ${Math.round(c.surv*100)}% still there next turn`, hot:false });
+  }
+  const drop = c.p.vorp - c.fb;
+  if (drop > 15) out.push({ t:`Positional cliff — next best ${c.p.pos} is ${Math.round(drop)} pts worse`, hot:true });
+  else if (drop < 3 && gap > 0) out.push({ t:`No cliff — ${c.p.pos} is deep, you can wait`, hot:false });
+  if (c.regret > 10) out.push({ t:`Expected cost of passing: ${Math.round(c.regret)} pts`, hot:true });
+  if (c.mult > 1) out.push({ t:`Fills an open starting slot`, hot:false });
+  else if (c.mult < 1) out.push({ t:`Bench depth only — ${c.p.pos} starters already covered`, hot:false });
+  if (c.byes) out.push({ t:`Bye-week clash with ${c.byes} rostered ${c.p.pos}`, hot:false });
+  if (c.p.inj && !["ACTIVE","NORMAL"].includes(c.p.inj))
+    out.push({ t:`Injury flag: ${c.p.inj} — value already discounted`, hot:true });
+  if (c.p.note)
+    out.push({ t: c.p.note, hot: /FADE|do NOT|not before|risk/i.test(c.p.note) });
+  if (c.p.projSource === "interpolated")
+    out.push({ t:`Projection interpolated between the briefing's stated anchors`, hot:false });
+  return out;
+}
+
+function render(){
+  if (!DATA) return;
+  const S = compute();
+  const L = DATA.league;
+
+  $("leagueName").textContent = L.name || "";
+  $("demoBanner").hidden = !DATA.demo;
+  const hasSrc = !DATA.demo && DATA.sourceNote;
+  $("srcBanner").hidden = !hasSrc;
+  if (hasSrc) $("srcText").textContent = DATA.verificationNote || DATA.sourceNote;
+  $("gPick").innerHTML = `${S.picksMade + 1}<small>/${L.teamCount * S.rounds}</small>`;
+  $("gMine").textContent = S.myPick ? `#${S.myPick}` : "—";
+  $("gGap").textContent = S.myPick ? S.gap : "—";
+  $("gapGauge").classList.toggle("urgent", S.gap > 0 && S.gap <= 3);
+  $("gRoster").innerHTML = `${S.mine.length}<small>/${S.rounds}</small>`;
+
+  // The pick
+  const top = S.scored[0];
+  const card = $("pickCard");
+  if (top){
+    card.hidden = false;
+    $("pickEyebrow").textContent = S.myPick ? `Take at #${S.myPick}` : "Best available";
+    $("pickName").textContent = top.p.name;
+    $("pickMeta").innerHTML =
+      `<span class="pos ${top.p.pos}">${top.p.pos}</span>` +
+      `<span>${top.p.team}</span>` +
+      `<span class="mono">ADP ${top.p.adp}</span>` +
+      `<span class="mono">${Math.round(top.p.proj)} pts</span>` +
+      (top.p.bye ? `<span class="mono">BYE ${top.p.bye}</span>` : "");
+    $("pickWhy").innerHTML = reasonsFor(top, S.gap)
+      .map(r => `<li class="${r.hot ? "hot" : ""}">${r.t}</li>`).join("");
+    $("pickMine").onclick = () => mark(top.p.id, "mine");
+    $("pickGone").onclick = () => mark(top.p.id, "gone");
+  } else {
+    card.hidden = true;
+  }
+
+  // Filters
+  const positions = ["ALL", ...new Set(DATA.players.map(p => p.pos))];
+  $("filters").innerHTML = positions.map(pos =>
+    `<button class="chip" data-pos="${pos}" aria-pressed="${posFilter === pos}">${pos}</button>`
+  ).join("");
+  $("filters").querySelectorAll(".chip").forEach(el => {
+    el.onclick = () => { posFilter = el.dataset.pos; render(); };
+  });
+
+  // Board — available first, then a tail of what has already gone.
+  const shown = S.scored.filter(c => posFilter === "ALL" || c.p.pos === posFilter).slice(0, 60);
+  const takenTail = DATA.players
+    .filter(p => marks.has(p.id) && (posFilter === "ALL" || p.pos === posFilter))
+    .sort((a, b) => marks.get(a.id).at - marks.get(b.id).at)
+    .slice(-8);
+
+  $("rows").innerHTML = shown.map((c, i) => `
+    <div class="row">
+      <span class="rank mono">${i+1}</span>
+      <span class="who">
+        <div class="who-name">${c.p.name}</div>
+        <div class="who-sub">${[
+          c.p.team,
+          c.p.bye ? "BYE " + c.p.bye : "",
+          "T" + c.p.tier,
+          c.p.impact != null ? "IMP " + c.p.impact : "",
+          c.p.projSource === "interpolated" ? "interp" : "",
+        ].filter(Boolean).join(" · ")}</div>
+      </span>
+      <span class="pos ${c.p.pos}">${c.p.pos}</span>
+      <span class="num vorp mono">${Math.round(c.p.vorp)}</span>
+      <span class="num adp mono dim">${c.p.adp}</span>
+      <span class="surv mono ${S.gap > 0 ? survClass(c.surv) : "dim"}">${
+        S.gap > 0 ? Math.round(c.surv*100) + "%" : "—"}</span>
+      <span class="acts">
+        <button class="a-mine" data-id="${c.p.id}" data-m="mine">Mine</button>
+        <button data-id="${c.p.id}" data-m="gone">Gone</button>
+      </span>
+    </div>`).join("")
+    + takenTail.map(p => `
+    <div class="row ${markOf(p.id) === "mine" ? "is-mine" : "is-gone"}">
+      <span class="rank mono">#${marks.get(p.id).at}</span>
+      <span class="who"><div class="who-name">${p.name}</div>
+        <div class="who-sub">${markOf(p.id) === "mine" ? "YOURS" : "drafted"}</div></span>
+      <span class="pos ${p.pos}">${p.pos}</span>
+      <span class="num vorp mono dim">${Math.round(p.vorp)}</span>
+      <span class="num adp mono dim">${p.adp}</span>
+      <span class="surv mono dim">—</span>
+      <span class="acts"><button data-id="${p.id}" data-m="undo">Undo</button></span>
+    </div>`).join("");
+
+  if (!shown.length && !takenTail.length)
+    $("rows").innerHTML = `<div class="empty">No players match this filter.</div>`;
+
+  $("rows").querySelectorAll("button[data-id]").forEach(b => {
+    b.onclick = () => b.dataset.m === "undo"
+      ? unmark(Number(b.dataset.id))
+      : mark(Number(b.dataset.id), b.dataset.m);
+  });
+
+  // Roster slots
+  const order = ["QB","RB","WR","TE","D/ST","K"];
+  $("slots").innerHTML = order.filter(pos => S.perTeam[pos]).map(pos => {
+    const h = S.have[pos] ?? 0, n = S.perTeam[pos];
+    const cls = h >= n ? "filled" : "need";
+    return `<span class="slot ${cls}">${pos} ${h}/${n}</span>`;
+  }).join("") + (S.mine.length
+    ? `<span class="slot">${S.mine.length} total</span>` : "");
+}
+
+// ---------------------------------------------------------------- actions
+function mark(id, how){
+  history.push(new Map(marks));
+  marks.set(id, { m: how, at: marks.size + 1 });
+  persist(); render();
+}
+function unmark(id){
+  history.push(new Map(marks));
+  marks.delete(id);
+  persist(); render();
+}
+function persist(){
+  try { localStorage.setItem(LS_MARKS, JSON.stringify([...marks])); } catch (e) {}
+}
+function restore(){
+  try {
+    const raw = localStorage.getItem(LS_MARKS);
+    if (raw) {
+      marks = new Map(JSON.parse(raw).map(([id, v], i) =>
+        [id, typeof v === "string" ? { m: v, at: i + 1 } : v]));
+    }
+  } catch (e) { marks = new Map(); }
+}
+function loadData(obj, remember){
+  DATA = obj;
+  if (remember){ try { localStorage.setItem(LS_DATA, JSON.stringify(obj)); } catch (e) {} }
+}
+
+$("undoBtn").onclick = () => {
+  if (!history.length) return;
+  marks = history.pop(); persist(); render();
+};
+$("resetBtn").onclick = () => {
+  if (!confirm("Clear every pick you have marked?")) return;
+  history.push(new Map(marks));
+  marks = new Map(); persist(); render();
+};
+$("loadBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const obj = JSON.parse(fr.result);
+      if (!obj.players || !obj.league) throw new Error("missing players/league");
+      loadData(obj, true);
+      marks = new Map(); history = [];
+      obj.players
+        .filter(p => p.draftedBy != null)
+        .sort((a, b) => (a.draftedAt ?? 0) - (b.draftedAt ?? 0))
+        .forEach((p, i) => marks.set(p.id, {
+          m: p.draftedBy === obj.league.myTeamId ? "mine" : "gone",
+          at: p.draftedAt ?? (i + 1),
+        }));
+      persist(); render();
+    } catch (err) {
+      alert("That file is not a cockpit export. Run:\n  python3 -m ffdraft.cli export\nand load the JSON it writes.");
+    }
+  };
+  fr.readAsText(file);
+};
+$("themeBtn").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : cur === "light" ? null : "dark";
+  if (next) document.documentElement.setAttribute("data-theme", next);
+  else document.documentElement.removeAttribute("data-theme");
+  try { next ? localStorage.setItem(LS_THEME, next) : localStorage.removeItem(LS_THEME); } catch (e) {}
+};
+
+// ---------------------------------------------------------------- boot
+try {
+  const t = localStorage.getItem(LS_THEME);
+  if (t) document.documentElement.setAttribute("data-theme", t);
+} catch (e) {}
+
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem(LS_DATA) || "null"); } catch (e) {}
+loadData(saved || JSON.parse($("seedData").textContent), false);
+restore();
+render();
+})();
+</script>
