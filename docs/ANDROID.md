@@ -44,6 +44,33 @@ checks whether your league needs cookies, and polls once.
 league is private you have to read `espn_s2` and `SWID` on a desktop once. The
 script takes them with hidden input. They last months.
 
+## The GUI
+
+You do not need an APK. The dashboard runs as a local web app:
+
+```bash
+python tools/serve.py
+```
+
+Open **http://127.0.0.1:8765** in Chrome, then **menu → Add to Home screen**.
+Android gives it its own icon and launches it without browser chrome — it looks
+and behaves like an app.
+
+It serves the dashboard seeded with your *live* snapshot, plus two controls:
+**Refresh from ESPN** (re-polls in place) and **Weekly brief**.
+
+One tap to launch it:
+
+```bash
+bash deploy/termux-widget-setup.sh
+```
+
+Then install **Termux:Widget** from F-Droid and drop the widget on your home
+screen. You get two buttons: *FreeAgent Dashboard* and *FreeAgent Poll*.
+
+The server binds to loopback only. `--host 0.0.0.0` exposes it to your whole
+network with no authentication — do not do that on public wifi.
+
 ## Scheduling
 
 ```bash
