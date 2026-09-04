@@ -170,7 +170,11 @@ def main() -> int:
         cfg = parse_league_config(client.settings(), creds.league_id, creds.season)
         team_id = creds.team_id or find_team_id(client.league(), creds.swid)
         if not team_id:
-            log("ERROR could not resolve your teamId. Set ESPN_TEAM_ID.")
+            log("ERROR could not resolve your teamId.")
+            log("  Find it:  python3 tools/find_league.py "
+                f"--league-id {creds.league_id} --list-teams")
+            log("  Then:     python3 tools/find_league.py "
+                f"--league-id {creds.league_id} --team-id <ID>")
             return 2
         log(f"league '{cfg.name}' | {cfg.team_count} teams | teamId {team_id}")
         snapshot = build(client, cfg, team_id)

@@ -4,7 +4,7 @@ A scoring-exact, simulation-driven fantasy football system for ESPN leagues.
 Draft engine, in-season bye-coverage analysis, and a weekly brief that tells
 you the handful of things worth doing.
 
-Built for **Kreis Liga** (ESPN league 461530087) — 12 teams, 0.5 PPR, snake.
+Built for **Schobbetruppe** (ESPN league 461530087) — 12 teams, 0.5 PPR, snake.
 
 ## Start here
 
