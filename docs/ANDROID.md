@@ -59,6 +59,21 @@ tail -f data/live/poll.log              # watch it run
 bash deploy/termux-schedule.sh --cancel
 ```
 
+## If setup stops at step 2/6
+
+```
+ERROR: Installing pip is forbidden, this will break the python-pip package (termux).
+```
+
+Termux ships pip as its own `python-pip` package and blocks `pip install
+--upgrade pip` outright, because self-upgrading would desync the package
+manager from the files on disk. Fixed in `termux-setup.sh` — `git pull` and
+re-run. Nothing was damaged; the script just stopped early.
+
+The same rule applies to anything else you run in Termux: install Python
+packages with `pip install <pkg>`, but never upgrade pip itself. Use
+`pkg upgrade python-pip` if you need a newer one.
+
 ## The honest caveat
 
 **Android Doze will defer background jobs.** A 3-hour poll may land late — an

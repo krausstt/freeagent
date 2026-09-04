@@ -25,9 +25,18 @@ pkg update -y >/dev/null 2>&1 || true
 pkg install -y python git termux-api
 
 say "2/6  Python dependency"
-# No --user here: Termux's prefix is already user-owned, and the flag warns.
-python -m pip install --quiet --upgrade pip
-python -m pip install --quiet -r requirements.txt
+# Two Termux-specific rules here:
+#  * Never `pip install --upgrade pip`. Termux ships pip as the python-pip
+#    package and blocks self-upgrade outright ("Installing pip is forbidden,
+#    this will break the python-pip package"), because it would desync the
+#    package manager from the installed files.
+#  * No --user. Termux's prefix is already user-owned, so the flag is
+#    redundant and only produces a warning.
+if python -c "import requests" 2>/dev/null; then
+  echo "requests already present, skipping install"
+else
+  python -m pip install --quiet -r requirements.txt
+fi
 python -c "import requests, sys; print('requests', requests.__version__, '| python', sys.version.split()[0])"
 
 say "3/6  Offline test suite (no network, no credentials)"
