@@ -17,6 +17,10 @@ cd freeagent
 powershell -ExecutionPolicy Bypass -File deploy\bootstrap.ps1
 ```
 
+**Android (Termux):** [`docs/ANDROID.md`](docs/ANDROID.md) — install Termux from
+F-Droid, **not** Google Play (that build is abandoned), then
+`bash deploy/termux-setup.sh`.
+
 **Linux / macOS:**
 
 ```bash
