@@ -198,7 +198,7 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
   <section>
     <h2>Roster</h2>
     <div class="rtable">
-      <div class="rhead"><span>Slot</span><span>Player</span><span>Pos</span><span>Bye</span><span>Wk 1</span></div>
+      <div class="rhead"><span>Slot</span><span>Player</span><span>Pos</span><span>Bye</span><span id="wkHdr">Wk 1</span></div>
       <div id="rosterRows"></div>
     </div>
   </section>
@@ -238,7 +238,18 @@ const NEED = D.lineupSlots;
 const R = D.roster;
 
 // ---- matchup bar
+// A live snapshot carries no opponent, so rather than implying a real contest
+// against 0.0 at a made-up 50%, collapse to just your own projected total.
 const pf = D.week1.projFor, pa = D.week1.projAgainst;
+const haveOpponent = pa > 0 && !!(D.week1.opponent || "").trim();
+if (!haveOpponent){
+  document.querySelector(".bar").hidden = true;
+  document.querySelector(".blab").hidden = true;
+  document.querySelectorAll(".matchup .mrow")[1].hidden = true;
+  const h = document.querySelector("section h2");
+  if (h) h.textContent = D.currentWeek ? `Week ${D.currentWeek} — your projected total`
+                                       : "Your projected total";
+}
 $("pf").textContent = pf.toFixed(1);
 $("pa").textContent = pa.toFixed(1);
 $("wp").textContent = Math.round(D.week1.winProbability * 100) + "% win probability";
@@ -264,6 +275,16 @@ function coverage(wk){
   };
 }
 
+// "Harold Fannin Jr." must shorten to "Fannin", not "Jr."; "Steelers D/ST" to
+// "Steelers", not "D/ST".
+const SUFFIXES = new Set(["jr","jr.","sr","sr.","ii","iii","iv","v"]);
+function shortName(full){
+  let parts = String(full).trim().split(/\s+/);
+  if (parts.length > 1 && /^D\/ST$/i.test(parts[parts.length-1])) parts.pop();
+  while (parts.length > 1 && SUFFIXES.has(parts[parts.length-1].toLowerCase())) parts.pop();
+  return parts[parts.length-1];
+}
+
 const ORDER = ["QB","RB","WR","FLEX","TE","D/ST","K"];
 // D/ST and K sit at +0 in every ordinary week -- one rostered, one required --
 // so zero there is the normal state, not a warning. Only depth positions earn amber.
@@ -281,7 +302,7 @@ for (let wk = 1; wk <= 18; wk++){
   if (worst < 0) problems.push({ wk, c });
   rows += `<tr class="${rowCls}"><th class="wk">Wk ${wk}</th>` +
     ORDER.map(k => `<td><span class="cell ${cls(c[k], k)}">${c[k] >= 0 ? "+" : ""}${c[k]}</span></td>`).join("") +
-    `<td class="outs">${c.out.map(p => p.n.split(" ").slice(-1)[0]).join(", ")}</td></tr>`;
+    `<td class="outs">${c.out.map(p => shortName(p.n)).join(", ")}</td></tr>`;
 }
 $("covBody").innerHTML = rows;
 

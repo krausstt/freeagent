@@ -63,7 +63,11 @@ def snapshot_to_dashboard(snap: dict) -> dict:
             slot = "FLEX"
         roster.append({
             "n": p.get("name", "?"), "p": p.get("pos", ""), "t": p.get("team", ""),
-            "bye": int(p.get("bye", 0) or 0), "w1": float(p.get("proj", 0.0) or 0.0),
+            "bye": int(p.get("bye", 0) or 0),
+            # "proj" is THIS WEEK. projSeason is the full-year total; showing
+            # the latter in a weekly column inflates a 117-point lineup to 2158.
+            "w1": float(p.get("proj", 0.0) or 0.0),
+            "season": float(p.get("projSeason", 0.0) or 0.0),
             "slot": slot,
             "q": (p.get("inj", "ACTIVE") or "ACTIVE").upper()
                  not in ("ACTIVE", "NORMAL", "PROBABLE"),
@@ -86,6 +90,27 @@ def snapshot_to_dashboard(snap: dict) -> dict:
         "waiverWatch": [],
         "currentWeek": lg.get("currentWeek"),
     }
+
+
+# dashboard/index.html is authored for the Artifact host, which wraps it in a
+# document with a charset, a viewport meta and a small reset. Served raw, the
+# missing viewport makes Chrome assume a ~980px desktop width and scale the whole
+# page down -- the page looks "not responsive" although the CSS is fine.
+HEAD = """<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font:14px/1.5 system-ui,sans-serif}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head><body>
+"""
+TAIL = "</body></html>"
 
 
 def render_dashboard() -> bytes:
@@ -132,7 +157,7 @@ document.getElementById('pollBtn').onclick = async (e) => {
   }
 };
 </script>"""
-    return (html + control).encode("utf-8")
+    return (HEAD + html + control + TAIL).encode("utf-8")
 
 
 def run_poll() -> tuple[bool, str]:

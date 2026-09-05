@@ -39,8 +39,23 @@ def log(msg: str) -> None:
     print(f"[{datetime.now(timezone.utc):%Y-%m-%d %H:%M:%SZ}] {msg}", flush=True)
 
 
-def my_roster(league_json: dict, team_id: int) -> list[Player]:
-    """Extract one team's roster from an mRoster payload."""
+def current_week(league_json: dict) -> int:
+    """The scoring period ESPN considers current. Falls back to week 1 in preseason."""
+    for value in (league_json.get("scoringPeriodId"),
+                  (league_json.get("status", {}) or {}).get("latestScoringPeriod")):
+        if isinstance(value, int) and value > 0:
+            return value
+    return 1
+
+
+def my_roster(league_json: dict, team_id: int, week: int) -> list[Player]:
+    """Extract one team's roster from an mRoster payload.
+
+    Captures BOTH projections ESPN publishes: the season total
+    (scoringPeriodId 0) and this week's (scoringPeriodId == week). They differ
+    by roughly 17x, so mixing them up turns a 117-point lineup into a 2158-point
+    one -- which is exactly what happened before this was split out.
+    """
     for team in league_json.get("teams", []) or []:
         if team.get("id") != team_id:
             continue
@@ -56,20 +71,26 @@ def my_roster(league_json: dict, team_id: int) -> list[Player]:
             )
             if position is None:
                 continue
-            proj = 0.0
+            proj_season = proj_week = 0.0
             for stat in info.get("stats", []) or []:
-                if stat.get("statSourceId") == 1 and stat.get("scoringPeriodId") == 0:
-                    proj = float(stat.get("appliedTotal", 0.0) or 0.0)
-                    break
+                if stat.get("statSourceId") != 1:          # 1 == projected
+                    continue
+                period = stat.get("scoringPeriodId")
+                total = float(stat.get("appliedTotal", 0.0) or 0.0)
+                if period == 0:
+                    proj_season = total
+                elif period == week:
+                    proj_week = total
             out.append(Player(
                 player_id=int(info.get("id", 0)),
                 name=info.get("fullName", "?"),
                 position=position,
                 pro_team=PRO_TEAM_MAP.get(info.get("proTeamId", 0), ""),
-                proj_points=proj,
+                proj_points=proj_week,
                 injury_status=info.get("injuryStatus", "ACTIVE") or "ACTIVE",
                 eligible_slots=tuple(eligible),
                 lineup_slot=SLOT_MAP.get(entry.get("lineupSlotId", -1), ""),
+                proj_season=proj_season,
             ))
         return out
     raise ESPNError(f"teamId {team_id} not found in this league")
@@ -92,7 +113,8 @@ def find_team_id(league_json: dict, swid: str | None) -> int | None:
 
 def build(client: ESPNClient, cfg: LeagueConfig, team_id: int) -> dict:
     league_json = client.league()
-    roster = my_roster(league_json, team_id)
+    week = current_week(league_json)
+    roster = my_roster(league_json, team_id, week)
 
     try:
         resolved = apply_bye_weeks(roster, bye_weeks(client.pro_schedule()))
@@ -118,12 +140,14 @@ def build(client: ESPNClient, cfg: LeagueConfig, team_id: int) -> dict:
             "id": cfg.league_id, "name": cfg.name, "season": cfg.season,
             "teamCount": cfg.team_count, "rosterSlots": cfg.roster_slots,
             "myTeamId": team_id,
-            "currentWeek": status.get("latestScoringPeriod"),
+            "currentWeek": week,
         },
         "roster": [
             {
                 "id": p.player_id, "name": p.name, "pos": p.position, "team": p.pro_team,
-                "proj": round(p.proj_points, 1), "bye": p.bye_week,
+                "proj": round(p.proj_points, 1),
+                "projSeason": round(p.proj_season, 1),
+                "bye": p.bye_week,
                 "inj": p.injury_status,
                 "lineupSlot": p.lineup_slot,
             }
@@ -203,6 +227,9 @@ def main() -> int:
         return 3
 
     problems = snapshot["problemWeeks"]
+    log(f"week {snapshot['league']['currentWeek']} | "
+        f"starters projected "
+        f"{round(sum(p['proj'] for p in snapshot['roster'] if p['lineupSlot'] not in ('BE','IR','')), 1)}")
     log(f"wrote {latest} | {len(snapshot['roster'])} players | "
         f"weeks you cannot field a lineup: {problems or 'none'}")
 

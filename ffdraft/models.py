@@ -22,8 +22,11 @@ class Player:
     name: str
     position: str
     pro_team: str
-    # ESPN's own season projection, already scored by THIS league's rules.
+    # ESPN's own projection, already scored by THIS league's rules.
+    # proj_points is the CURRENT WEEK in season; proj_season is the full-year
+    # total. They differ by ~17x, so they must never share a field.
     proj_points: float = 0.0
+    proj_season: float = 0.0
     adp: float = 0.0
     espn_rank: float = 0.0
     percent_owned: float = 0.0
