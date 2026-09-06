@@ -1,0 +1,336 @@
+<title>Edge Over Eleven</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#0A100E; --surface:#131B18; --surface-2:#1B2521; --line:#2A3733;
+  --ink:#EAF0EC; --ink-dim:#8DA096; --ink-faint:#5D6E66;
+  --accent:#7DD8FF; --ok:#56C596; --warn:#FFC048; --bad:#FF6B4A;
+  --radius:3px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+    --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+    --accent:#0A6E96; --ok:#1E7A55; --warn:#8A5600; --bad:#C03A1C;
+  }
+}
+:root[data-theme="light"]{
+  --ground:#F2F5F2; --surface:#FFFFFF; --surface-2:#E9EEEA; --line:#CBD6CF;
+  --ink:#0F1815; --ink-dim:#4A5D55; --ink-faint:#7C8E85;
+  --accent:#0A6E96; --ok:#1E7A55; --warn:#8A5600; --bad:#C03A1C;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Barlow",system-ui,sans-serif;font-size:16px;line-height:1.55}
+h1,h2,h3{font-family:"Barlow Condensed",system-ui,sans-serif;font-weight:700;
+  margin:0;letter-spacing:.01em;text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 72px}
+header{padding:28px 0 18px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:38px;line-height:1.02;margin-top:6px}
+.lede{font-size:17px;color:var(--ink-dim);margin-top:12px;max-width:34em}
+
+section{margin-top:34px}
+h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);
+  padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:14px}
+h3{font-size:19px;margin-bottom:5px}
+p{margin:0 0 12px}
+.thesis{border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:18px 0}
+.thesis p{font-size:20px;line-height:1.35;font-weight:500;margin:0}
+.thesis .sub{font-size:14px;color:var(--ink-dim);margin-top:8px;font-weight:400}
+
+.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+  padding:14px 15px;margin-bottom:11px}
+.card.hot{border-left:2px solid var(--bad)}
+.card.warm{border-left:2px solid var(--warn)}
+.card.good{border-left:2px solid var(--ok)}
+.tag{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);
+  display:block;margin-bottom:3px}
+.card.hot .tag{color:var(--bad)} .card.warm .tag{color:var(--warn)}
+.card.good .tag{color:var(--ok)}
+.card p:last-child{margin-bottom:0}
+.quote{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-dim);
+  background:var(--surface-2);border-radius:var(--radius);padding:9px 11px;margin:9px 0;
+  white-space:pre-wrap;overflow-x:auto}
+
+.axes{display:grid;gap:11px;margin:16px 0}
+@media(min-width:620px){.axes{grid-template-columns:1fr 1fr}}
+.axis{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:14px}
+.axis .n{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;
+  line-height:1;color:var(--accent)}
+.axis h3{margin:6px 0 5px}
+.axis p{font-size:14px;color:var(--ink-dim);margin:0}
+.axis .status{font-size:11px;margin-top:9px;padding-top:8px;border-top:1px solid var(--line);
+  letter-spacing:.07em;text-transform:uppercase}
+.axis .status.done{color:var(--ok)} .axis .status.open{color:var(--warn)}
+
+.tbl{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:14px 0}
+.trow{display:grid;grid-template-columns:1fr 52px 52px;gap:9px;padding:10px 12px;
+  border-bottom:1px solid var(--line);align-items:center}
+.trow:last-child{border-bottom:none}
+.trow.hdr{background:var(--surface-2);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.trow:not(.hdr){background:var(--surface)}
+.trow .what{min-width:0}
+.trow .what b{display:block;font-size:15px;font-weight:600}
+.trow .what span{font-size:12.5px;color:var(--ink-dim)}
+.pill{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;
+  padding:3px 0;border-radius:var(--radius)}
+.p-hi{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.p-md{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.p-lo{color:var(--ink-faint);background:var(--surface-2)}
+
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0 0}
+ol.steps li{counter-increment:s;position:relative;padding:0 0 15px 40px;margin-bottom:15px;
+  border-bottom:1px solid var(--line)}
+ol.steps li:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;
+  width:27px;height:27px;border:1px solid var(--accent);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--accent)}
+ol.steps h3{font-size:17px}
+ol.steps p{font-size:14.5px;color:var(--ink-dim);margin:4px 0 0}
+.when{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+  margin-top:6px;display:block}
+
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-faint);line-height:1.65}
+strong{font-weight:600;color:var(--ink)}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Schobbetruppe · 12 teams · what actually wins</div>
+  <h1>Edge Over Eleven</h1>
+  <p class="lede">Where a decision system beats the ESPN app — argued from three
+  screenshots taken today, not from a framework.</p>
+</header>
+
+<section>
+  <h2>The thesis</h2>
+  <div class="thesis">
+    <p>Every feature ESPN ships is single-team, single-week, single-player.</p>
+    <p class="sub">Projections are per player. "Optimize Lineup" is your team, this week.
+    Free-agent alerts are player-centric. The matchup is you versus one opponent, now.
+    Nothing in the product is <strong>comparative across the league</strong> or
+    <strong>forward across the season</strong> — and that is not an oversight.
+    ESPN serves millions of managers and has no reason to help one of them beat
+    the other eleven.</p>
+  </div>
+  <p>So the edge is not better projections. ESPN's projections are fine, and they
+  are already scored by your league's rules. The edge lives on the two axes the
+  product does not span.</p>
+</section>
+
+<section>
+  <h2>The two axes</h2>
+  <div class="axes">
+    <div class="axis">
+      <div class="n">01</div>
+      <h3>Across teams</h3>
+      <p>How scarce is a position <em>in this league</em>? Who else needs the
+      player you want? Who has surplus you can buy cheaply?</p>
+      <div class="status open">Untapped — the data exists</div>
+    </div>
+    <div class="axis">
+      <div class="n">02</div>
+      <h3>Across weeks</h3>
+      <p>Which future week does today's roster break in? What does the playoff
+      run look like from here?</p>
+      <div class="status done">Built — found 2 broken weeks</div>
+    </div>
+  </div>
+  <p>Axis 2 already paid off: the bye-coverage pass found Week 9 (no D/ST) and
+  Week 14 (no kicker) — two guaranteed empty starting slots that ESPN never
+  mentioned once, because ESPN never looks past the current week.</p>
+</section>
+
+<section>
+  <h2>Three proofs from today</h2>
+
+  <div class="card hot">
+    <span class="tag">Proof 1 · your matchup screen</span>
+    <h3>Your riskiest player locks first</h3>
+    <p>McCaffrey carries a Q, is your RB1, and per ESPN's own game times kicks off
+    <strong>Friday 02:35</strong> your time. Your next starter does not play until
+    <strong>Sunday 19:00</strong> — roughly 64 hours later.</p>
+    <p>ESPN displays both times. It never connects them. The actionable form is:
+    <em>your highest-risk starter locks two and a half days before you would
+    normally do an inactive sweep, so his contingency has to be settled Thursday,
+    not Sunday.</em></p>
+  </div>
+
+  <div class="card warm">
+    <span class="tag">Proof 2 · free-agent alerts</span>
+    <h3>Notifications are events, not intelligence</h3>
+    <div class="quote">00:40  LeckerBierchenBande  −Calvin Ridley  +Jordyn Tyson (WR)
+00:48  LeckerBierchenBande  +Kayshon Boutte (WR)
+01:14  CheeseHeadMafia      +Chris Rodriguez Jr. (RB)</div>
+    <p>Three pushes, zero interpretation. The same three events, read as data:
+    <strong>LeckerBierchenBande made two WR moves in eight minutes after
+    midnight</strong> — an active manager hunting receivers, who will bid against
+    you on every WR breakout this season. And <strong>the late-round RB sleeper
+    from your draft briefing went to CheeseHeadMafia</strong>, so that hedge is
+    gone and your McCaffrey exposure is unchanged.</p>
+    <p>ESPN had every byte of that and shipped you a notification.</p>
+  </div>
+
+  <div class="card good">
+    <span class="tag">Proof 3 · what moved while you slept</span>
+    <h3>Projections are not static</h3>
+    <p>ESPN now has you at <strong>130.6 vs 123.2 (55%)</strong>. At draft close it
+    was 117.5 vs 114.0. Your D/ST alone went from an unpopulated 0.3 to 12.29.</p>
+    <p>Any advice pinned to draft-day numbers is already stale. That is an argument
+    for polling, not for a smarter one-off analysis.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Edge inventory</h2>
+  <p>Ranked by realistic edge against feasibility this season. Everything here is
+  reachable from the ESPN read API on a public league.</p>
+  <div class="tbl">
+    <div class="trow hdr"><span>Capability</span><span>Edge</span><span>Cost</span></div>
+    <div class="trow"><span class="what"><b>League scarcity map</b>
+      <span>All 12 rosters → where you're surplus, where they're thin</span></span>
+      <span class="pill p-hi">high</span><span class="pill p-hi">low</span></div>
+    <div class="trow"><span class="what"><b>Waiver competition model</b>
+      <span>Who else needs this player, given their roster holes</span></span>
+      <span class="pill p-hi">high</span><span class="pill p-md">med</span></div>
+    <div class="trow"><span class="what"><b>Decision journal</b>
+      <span>Log choice + alternatives + expectation, before outcome</span></span>
+      <span class="pill p-md">later</span><span class="pill p-hi">low</span></div>
+    <div class="trow"><span class="what"><b>Lock-time risk</b>
+      <span>Earliest-kickoff starters with injury flags</span></span>
+      <span class="pill p-md">med</span><span class="pill p-hi">low</span></div>
+    <div class="trow"><span class="what"><b>Trade surplus matching</b>
+      <span>Your surplus ↔ their scarcity, ranked by your gain</span></span>
+      <span class="pill p-hi">high</span><span class="pill p-md">med</span></div>
+    <div class="trow"><span class="what"><b>Playoff-week planning</b>
+      <span>Weeks 15–17 schedule strength across your roster</span></span>
+      <span class="pill p-md">med</span><span class="pill p-md">med</span></div>
+    <div class="trow"><span class="what"><b>Manager behaviour profiles</b>
+      <span>FAAB curves, positional bias, reaction latency</span></span>
+      <span class="pill p-lo">thin</span><span class="pill p-lo">high</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Where the research overreaches</h2>
+  <p>The report is right about direction and too optimistic about season one.
+  The binding constraint is sample size, and it is not close.</p>
+
+  <div class="card">
+    <h3>Behavioural profiles need more than a season</h3>
+    <p>A manager makes roughly 15–30 transactions across a 14-week season. That
+    supports estimating two or three gross parameters — activity level, positional
+    bias, rough FAAB aggression. It does not support "overpays for rookies" or
+    "hates trading with Manager C". Those are ten-observation claims dressed as
+    profiles. Build the <strong>log</strong> now; build the <strong>model</strong>
+    in season two.</p>
+  </div>
+
+  <div class="card">
+    <h3>A nine-dimension Fantasy IQ is noise</h3>
+    <p>You make ~14 lineup decisions and ~20 waiver decisions in a season. Split
+    across nine scored dimensions, most cells hold one or two observations. A score
+    that moves 20 points on one lucky week teaches the wrong lesson — the exact
+    failure the report elsewhere warns against.</p>
+  </div>
+
+  <div class="card">
+    <h3>The canvas UI is the least valuable expensive thing</h3>
+    <p>The value is in the numbers, and the numbers fit on a phone screen. A
+    drag-and-drop scenario canvas is weeks of work for a view you would open
+    twice.</p>
+  </div>
+
+  <div class="card good">
+    <h3>But decision-vs-outcome is the best idea in the report</h3>
+    <p>Separating "was that a good decision" from "did it work" is cheap to build,
+    genuinely rare, and <strong>time-critical</strong>: it only works if you log
+    the decision <em>before</em> the outcome. Every week you wait is a week of
+    training data that cannot be recovered. This is the one thing that should be
+    built before Thursday.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Build order</h2>
+  <ol class="steps">
+    <li>
+      <h3>Decision journal</h3>
+      <p>Every recommendation writes: the options considered, the projection for
+      each, what you chose, and what the model expected — timestamped before
+      kickoff. Outcome is joined afterwards. Small, and impossible to backfill.</p>
+      <span class="when">Before Week 1 · or the season is lost</span>
+    </li>
+    <li>
+      <h3>League scarcity map</h3>
+      <p>Pull all 12 rosters, compute positional strength per team, rank yourself.
+      This one dataset powers both waiver priority and trade targeting, and ESPN
+      structurally cannot show it.</p>
+      <span class="when">Week 1–2</span>
+    </li>
+    <li>
+      <h3>Waiver competition</h3>
+      <p>For any target, which of the eleven also need that position, and what have
+      they historically paid. Turns a generic ranking into a bid.</p>
+      <span class="when">Week 2–3 · needs transaction history to accumulate</span>
+    </li>
+    <li>
+      <h3>Trade surplus matching</h3>
+      <p>Scan for surplus↔scarcity pairs across the league, ranked by <em>your</em>
+      marginal gain rather than by "fairness".</p>
+      <span class="when">Week 3–5 · trade market opens once rosters settle</span>
+    </li>
+    <li>
+      <h3>Playoff-week planning</h3>
+      <p>Weeks 15–17 schedule strength per rostered player, so trades and stashes
+      aim at the weeks that decide the title.</p>
+      <span class="when">Week 6–8</span>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>What this is worth, honestly</h2>
+  <p>Fantasy is high variance and no process makes it deterministic. A realistic
+  accounting for a 12-team league:</p>
+  <div class="tbl">
+    <div class="trow hdr"><span>Lever</span><span colspan="2">Season value</span><span></span></div>
+    <div class="trow"><span class="what"><b>Never field an empty slot</b>
+      <span>Weeks 9 and 14, already caught</span></span>
+      <span class="pill p-hi">~1–2 W</span><span class="pill p-lo">done</span></div>
+    <div class="trow"><span class="what"><b>Optimal start/sit</b>
+      <span>3–8 pts/week against your own bench</span></span>
+      <span class="pill p-hi">~1–2 W</span><span class="pill p-lo">done</span></div>
+    <div class="trow"><span class="what"><b>Winning contested waivers</b>
+      <span>Compounds — the largest single lever</span></span>
+      <span class="pill p-hi">~1–2 W</span><span class="pill p-md">next</span></div>
+    <div class="trow"><span class="what"><b>One or two good trades</b>
+      <span>Converting surplus into scarcity</span></span>
+      <span class="pill p-md">~1 W</span><span class="pill p-md">next</span></div>
+  </div>
+  <p>Call it <strong>two to four wins</strong> over fourteen weeks. In a 12-team
+  league that is the difference between missing the playoffs and holding a bye.
+  It is not magic, and anyone promising more is selling something.</p>
+</section>
+
+<footer>
+  Written 6 September 2026, before Week 1. Evidence taken from three screenshots
+  of the live ESPN app: the Schobbetruppe matchup view, the free-agent alert feed,
+  and the served dashboard. Every capability listed as buildable was checked
+  against what the ESPN v3 read API actually returns — including
+  <span class="mono">kona_league_communication</span>, which carries every add,
+  drop and trade with a timestamp and the FAAB bid amount.
+  <br><br>
+  ESPN exposes no write endpoint. Everything here advises; you execute.
+</footer>
+</div>
