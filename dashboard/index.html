@@ -147,6 +147,43 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
   .rhead,.rrow{grid-template-columns:40px minmax(0,1fr) 34px 32px 42px}
   .head h1{font-size:22px}
 }
+
+/* Phones: the coverage matrix stops being a table and becomes one card per
+   week. A grid you have to scroll sideways to read is a grid you do not read. */
+@media(max-width:560px){
+  .gridwrap{overflow:visible;border:none;background:none}
+  table.cov{min-width:0;display:block}
+  table.cov thead{display:none}
+  table.cov tbody{display:flex;flex-direction:column;gap:8px}
+  table.cov tr{
+    display:grid;grid-template-columns:auto 1fr;gap:2px 10px;
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--surface);padding:9px 11px;
+  }
+  table.cov tr.r-short{border-left:2px solid var(--short)}
+  table.cov tr.r-thin{border-left:2px solid var(--thin)}
+  table.cov th.wk{
+    grid-column:1/-1;text-align:left;padding:0 0 5px;border:none;
+    font-size:14px;font-weight:700;
+    font-family:"Barlow Condensed",sans-serif;letter-spacing:.03em;
+  }
+  table.cov td{
+    display:inline-flex;align-items:baseline;gap:5px;
+    border:none;padding:0;text-align:left;font-size:11px;
+  }
+  /* Label each number, since the header row is gone. */
+  table.cov td::before{
+    content:attr(data-k);font-size:9px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink-faint);
+  }
+  table.cov td:nth-of-type(-n+7){grid-column:auto}
+  table.cov tr{grid-template-columns:repeat(4,1fr)}
+  table.cov td.outs{
+    grid-column:1/-1;white-space:normal;padding:6px 0 0;margin-top:4px;
+    border-top:1px solid var(--line);color:var(--ink-dim);font-size:11.5px;
+  }
+  table.cov td.outs::before{content:"On bye · ";color:var(--ink-faint)}
+}
 </style>
 
 <div class="wrap">
@@ -301,7 +338,7 @@ for (let wk = 1; wk <= 18; wk++){
   const rowCls = worst < 0 ? "r-short" : depthWorst === 0 ? "r-thin" : "";
   if (worst < 0) problems.push({ wk, c });
   rows += `<tr class="${rowCls}"><th class="wk">Wk ${wk}</th>` +
-    ORDER.map(k => `<td><span class="cell ${cls(c[k], k)}">${c[k] >= 0 ? "+" : ""}${c[k]}</span></td>`).join("") +
+    ORDER.map(k => `<td data-k="${k}"><span class="cell ${cls(c[k], k)}">${c[k] >= 0 ? "+" : ""}${c[k]}</span></td>`).join("") +
     `<td class="outs">${c.out.map(p => shortName(p.n)).join(", ")}</td></tr>`;
 }
 $("covBody").innerHTML = rows;
