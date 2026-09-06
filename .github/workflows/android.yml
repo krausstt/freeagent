@@ -11,11 +11,6 @@ on:
       - 'dashboard/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
-    inputs:
-      release:
-        description: 'Publish a GitHub Release for Obtainium'
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -23,6 +18,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Hoisted here on purpose: the `secrets` context is not available in a step
+    # `if`, and a step's own `env:` is not in scope for that step's `if` either.
+    # Job-level env is the only place this conditional can read from.
+    env:
+      HAVE_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -55,7 +55,7 @@ jobs:
       # Obtainium should track.
       - name: Decode signing keystore
         id: keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAVE_KEYSTORE == 'true' }}
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
@@ -84,7 +84,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish release
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
