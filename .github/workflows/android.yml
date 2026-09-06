@@ -1,0 +1,101 @@
+name: Android APK
+
+# Build on every relevant push so breakage surfaces immediately. Publish a
+# Release only on a manual run, so Obtainium sees deliberate versions rather
+# than one per commit.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'dashboard/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish a GitHub Release for Obtainium'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Printed rather than assumed: if the runner image ever drops the
+      # preinstalled SDK, this line is the difference between a clear failure
+      # and a confusing one.
+      - name: Show Android SDK location
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+          ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}/platforms" || true
+
+      - name: Generate the WebView asset from the canonical dashboard
+        run: python3 android/build_assets.py
+
+      - name: Build debug APK
+        working-directory: android
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      # Release signing only happens when the keystore secret exists. Without
+      # it we still ship a debug APK that installs, but Android refuses to
+      # update across differing signing keys, so the signed variant is the one
+      # Obtainium should track.
+      - name: Decode signing keystore
+        id: keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release APK
+        if: ${{ steps.keystore.outputs.path != '' }}
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          APP_VERSION: 0.1.${{ github.run_number }}
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: Collect APKs
+        run: |
+          mkdir -p out
+          find android/app/build/outputs/apk -name '*.apk' -exec cp {} out/ \;
+          ls -la out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freeagent-apk
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: Publish release
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v0.1.${{ github.run_number }}"
+          gh release create "$TAG" out/*.apk \
+            --repo "${{ github.repository }}" \
+            --title "FreeAgent $TAG" \
+            --notes "Automated build from ${{ github.sha }}.
+
+          Point Obtainium at this repository to install and track updates.
+
+          A debug-signed APK installs but cannot be updated in place, because
+          Android refuses updates across differing signing keys. Configure the
+          KEYSTORE_BASE64 secret to get an upgradeable signed build."

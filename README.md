@@ -17,6 +17,9 @@ cd freeagent
 powershell -ExecutionPolicy Bypass -File deploy\bootstrap.ps1
 ```
 
+**Android (native APK):** [`docs/APK.md`](docs/APK.md) — built by CI, installed
+and auto-updated through Obtainium. Talks to ESPN directly; no backend needed.
+
 **Android (Termux):** [`docs/ANDROID.md`](docs/ANDROID.md) — install Termux from
 F-Droid, **not** Google Play (that build is abandoned), then
 `bash deploy/termux-setup.sh`.
