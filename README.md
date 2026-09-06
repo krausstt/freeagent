@@ -56,6 +56,14 @@ independent survival probabilities overstates how many targets survive.
 replacement who will certainly be gone is a worse pick than one worth 3 who will
 certainly be there. A sorted list cannot express that.
 
+**It judges the decision, not the result.** A conventional app calls your
+start/sit "wrong" when the benched player outscores the starter. In a
+high-variance game that rewards luck and punishes sound reasoning. The journal
+records what you chose *and what you knew at the time*, so a call that was right
+on the information available reads as **"right call, unlucky"** rather than an
+error. This cannot be backfilled — a projection looked up next month is not the
+one you decided on.
+
 **It stays quiet when nothing matters.** Lineup swaps under 1.0 projected point
 are suppressed; projections are not precise enough to justify churn over noise.
 
@@ -66,6 +74,7 @@ are suppressed; projections are not precise enough to justify churn over noise.
 | `ffdraft/` | the engine — valuation, availability, bye coverage, brief |
 | `tools/poll_espn.py` | fetch the live league → `data/live/latest.json` |
 | `tools/weekly_brief.py` | snapshot → this week's decisions |
+| `tools/journal.py` | the decision journal: process quality vs results |
 | `tools/find_league.py` | league + cookie discovery, auto-detects your team id |
 | `dashboard/index.html` | season command center, opens in any browser |
 | `cockpit/index.html` | live draft board |
@@ -74,12 +83,13 @@ are suppressed; projections are not precise enough to justify churn over noise.
 
 ## Tests
 
-22, all offline — no network, no credentials:
+29, all offline — no network, no credentials:
 
 ```
 tests/test_engine.py   11   draft valuation, VORP, Jenks tiers, Monte Carlo
 tests/test_season.py    5   bye coverage, flex eligibility, single-slot handling
 tests/test_brief.py     6   lineup swaps, noise suppression, bye alerts
+tests/test_journal.py   7   decision vs outcome, dedup, corrupt-line tolerance
 ```
 
 ## Two things that are true

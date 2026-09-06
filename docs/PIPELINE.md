@@ -226,3 +226,31 @@ warning instead of confident advice built on stale data.
 It **reads**. ESPN exposes no write endpoint for fantasy actions (verified: the
 maintained `espn-api` client has zero POST/PUT/PATCH calls). Waiver claims and
 lineup changes stay manual in the app. See `ESPN_INTERFACES.md`.
+
+## The decision journal
+
+The one part of this that cannot be reconstructed later.
+
+```bash
+python3 tools/weekly_brief.py --journal    # log this week's calls
+python3 tools/journal.py show              # what has been logged
+python3 tools/journal.py score             # process quality vs results
+python3 tools/journal.py outcome <id> 1042=4.0 1088=31.0
+```
+
+Every lineup call the brief surfaces is written down **before kickoff**, together
+with the projections it was made on. Afterwards the actual points are attached,
+and the two are judged separately:
+
+| | Worked | Did not work |
+|---|---|---|
+| **Best option chosen** | right call, right result | **right call, unlucky** |
+| **Not the best option** | wrong call, got away with it | wrong call, punished |
+
+The bottom-right and top-right cells look identical in a conventional app —
+both are "you lost points". They are not the same thing, and treating them the
+same is how managers learn superstitions from noise.
+
+Decisions are append-only; outcomes are stored separately keyed by decision id,
+so history is never rewritten. A journal you can edit after the fact is not
+evidence. Re-running the brief before kickoff does not duplicate entries.

@@ -21,10 +21,12 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from ffdraft.brief import build, render_markdown  # noqa: E402
+from ffdraft.journal import Option, record  # noqa: E402
 from ffdraft.models import LeagueConfig, Player  # noqa: E402
 
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 DEFAULT_SNAPSHOT = os.path.join(REPO, "data", "live", "latest.json")
+DEFAULT_JOURNAL = os.path.join(REPO, "data", "journal")
 
 
 def load(path: str) -> tuple[LeagueConfig, list[Player], int | None]:
@@ -72,6 +74,8 @@ def main() -> int:
     ap.add_argument("--week", type=int, help="override the scoring period")
     ap.add_argument("--write", action="store_true", help="save brief-latest.md next to the snapshot")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of markdown")
+    ap.add_argument("--journal", metavar="DIR", nargs="?", const=DEFAULT_JOURNAL,
+                    help="also log each lineup call to the decision journal")
     args = ap.parse_args()
 
     if not os.path.exists(args.snapshot):
@@ -81,6 +85,25 @@ def main() -> int:
     cfg, roster, week = load(args.snapshot)
     brief = build(cfg, roster, args.week if args.week is not None else week,
                   previous_injuries(args.snapshot))
+
+    # Logged before the games, which is the only time it means anything: a
+    # projection looked up afterwards is not the one the call was made on.
+    if args.journal:
+        logged = 0
+        for sw in brief.lineup_swaps:
+            entry = record(
+                args.journal, week=brief.week or 0, kind="lineup",
+                summary=f"Start {sw['start']} over {sw['bench']}",
+                chosen=Option(sw["startId"], sw["start"], sw["startProj"], sw["startPos"]),
+                alternatives=[Option(sw["benchId"], sw["bench"], sw["benchProj"],
+                                     sw["benchPos"])],
+                expected_gain=sw["gain"],
+                context={"leagueId": cfg.league_id, "snapshot": brief.generated_at},
+            )
+            if entry:
+                logged += 1
+        print(f"journal: {logged} new decision(s) recorded in {args.journal}",
+              file=sys.stderr)
 
     if args.json:
         print(json.dumps(dataclasses.asdict(brief), indent=2))

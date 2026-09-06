@@ -74,8 +74,10 @@ def lineup_check(cfg: LeagueConfig, roster: list[Player]) -> tuple[float, float,
         if gain < 1.0:
             continue  # projection noise, not a decision
         swaps.append({
+            "startId": bring_in.player_id,
             "start": bring_in.name, "startPos": bring_in.position,
             "startProj": round(bring_in.proj_points, 1),
+            "benchId": sit_down.player_id,
             "bench": sit_down.name, "benchPos": sit_down.position,
             "benchProj": round(sit_down.proj_points, 1),
             "gain": round(gain, 1),
