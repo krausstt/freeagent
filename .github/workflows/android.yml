@@ -93,7 +93,7 @@ jobs:
           secret, so the private key never leaves it in the clear and the repo stays
           readable. Every later build decrypts this to sign, which is what lets
           Android accept updates in place instead of demanding a reinstall."
-          git push
+          git push origin "HEAD:${GITHUB_REF_NAME}"
           echo "Signing key created. Keep the KEYSTORE_PASSPHRASE secret: losing it"
           echo "means no further updates can be installed over this app."
 
