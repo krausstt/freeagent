@@ -80,6 +80,7 @@ are suppressed; projections are not precise enough to justify churn over noise.
 | `dashboard/index.html` | season command center, opens in any browser |
 | `cockpit/index.html` | live draft board |
 | `deploy/` | Windows Task Scheduler + systemd/cron |
+| `docs/HANDOFF.md` | **start here if you are picking this up cold** |
 | `docs/` | Windows guide, pipeline runbook, ESPN interface findings |
 
 ## Tests
