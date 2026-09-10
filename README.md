@@ -74,6 +74,7 @@ are suppressed; projections are not precise enough to justify churn over noise.
 | `ffdraft/` | the engine — valuation, availability, bye coverage, brief |
 | `tools/poll_espn.py` | fetch the live league → `data/live/latest.json` |
 | `tools/weekly_brief.py` | snapshot → this week's decisions |
+| `tools/league_map.py` | all 12 rosters → positional strength, ranks, trade ideas |
 | `tools/journal.py` | the decision journal: process quality vs results |
 | `tools/find_league.py` | league + cookie discovery, auto-detects your team id |
 | `dashboard/index.html` | season command center, opens in any browser |
@@ -83,13 +84,24 @@ are suppressed; projections are not precise enough to justify churn over noise.
 
 ## Tests
 
-29, all offline — no network, no credentials:
+48, all offline — no network, no credentials:
 
 ```
-tests/test_engine.py   11   draft valuation, VORP, Jenks tiers, Monte Carlo
-tests/test_season.py    5   bye coverage, flex eligibility, single-slot handling
-tests/test_brief.py     6   lineup swaps, noise suppression, bye alerts
-tests/test_journal.py   7   decision vs outcome, dedup, corrupt-line tolerance
+tests/test_engine.py      11   draft valuation, VORP, Jenks tiers, Monte Carlo
+tests/test_season.py       5   bye coverage, flex eligibility, single-slot handling
+tests/test_brief.py        6   lineup swaps, noise suppression, bye alerts
+tests/test_journal.py      7   decision vs outcome, dedup, corrupt-line tolerance
+tests/test_league_map.py  19   positional strength, replacement level, trade logic
+```
+
+Run them all: `for t in tests/test_*.py; do python3 "$t" || break; done`
+
+`tests/sample_league.raw.json` is a synthetic 12-team payload (regenerate with
+`tests/make_sample_league.py`) so the league map can be exercised from a machine
+that cannot reach ESPN — which includes every Claude Cloud session:
+
+```
+python3 tools/league_map.py --from tests/sample_league.raw.json --team-id 1
 ```
 
 ## Two things that are true
