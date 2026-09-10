@@ -102,11 +102,11 @@ spend time debugging the 403; use `--from` with a saved payload instead.
 
 ## Blocked on Tobi
 
-- **APK signing.** `.github/workflows/android.yml` builds a debug APK today
-  (829 KB in 94s, run 34043594011). A release APK for Obtainium needs four repo
-  secrets — `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
-  — generated locally with `keytool`. Android refuses updates across signing
-  keys, so whichever keystore is used first is permanent. See `docs/APK.md`.
+- **APK signing.** One secret, `KEYSTORE_PASSPHRASE`, then one dispatch of the
+  Android APK workflow with `bootstrap_keystore` ticked. CI generates the key,
+  encrypts it into `android/release.jks.enc`, and signs every later build with
+  it. Until that happens releases carry a debug APK: installable, but
+  `debuggable` and not updatable in place. See `docs/APK.md`.
 - **Cookie rotation.** Live `espn_s2` / `SWID` values were pasted into a chat
   transcript. They are password-equivalent for the ESPN account. They were never
   written to disk and a secret scan confirms they never entered this repo, but

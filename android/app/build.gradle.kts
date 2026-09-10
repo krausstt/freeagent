@@ -15,16 +15,21 @@ android {
         versionName = System.getenv("APP_VERSION") ?: "0.1.0"
     }
 
-    // Signed only when CI has the keystore secrets. Without them the release
+    // Signed only when CI has decrypted the keystore. Without it the release
     // task is skipped rather than silently producing an APK that can never be
     // updated in place, because Android refuses updates across signing keys.
+    //
+    // PKCS12 rather than the deprecated JKS, and declared explicitly: letting
+    // the plugin infer the store type from the file extension fails on a
+    // keystore CI writes as ".jks" while keytool actually wrote PKCS12.
     val storeFilePath = System.getenv("KEYSTORE_PATH")
     signingConfigs {
         if (storeFilePath != null) {
             create("release") {
                 storeFile = file(storeFilePath)
+                storeType = "PKCS12"
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
+                keyAlias = System.getenv("KEY_ALIAS") ?: "freeagent"
                 keyPassword = System.getenv("KEY_PASSWORD")
             }
         }

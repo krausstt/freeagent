@@ -38,46 +38,42 @@ so breakage surfaces on the commit that caused it.
 
 ## Signing, and why it matters for Obtainium
 
-Android refuses to update an app when the signing key changes. A debug APK is
-signed with a key CI regenerates each run, so **debug builds install but can
-never be updated in place** — you would have to uninstall and lose local state.
+Android refuses to update an app when the signing key changes, and CI generates
+a throwaway debug key on every run. So without a stable key, **every update is
+an uninstall and a reinstall**. A debug APK is also marked `debuggable`, which
+lets any other app on the phone read what this one stores — reason enough not to
+put ESPN credentials in one.
 
-For upgradeable builds, create a keystore once and add it as repository secrets:
+The key is created once, by CI, and stored in this repository **encrypted**.
+The only thing you have to type is one password.
 
-```bash
-keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 4096 \
-  -validity 10000 -alias freeagent
-base64 -w0 release.jks    # paste as the KEYSTORE_BASE64 secret
-```
+### Setup, once
 
-Repository → Settings → Secrets and variables → Actions:
+1. Repository → **Settings → Secrets and variables → Actions → New secret**
+   - Name: `KEYSTORE_PASSPHRASE`
+   - Value: any password you choose. Write it down — losing it means no further
+     update can ever install over the app, only a reinstall.
+2. **Actions → Android APK → Run workflow**, tick
+   **"One time only: create the app signing key"**, run it.
 
-| Secret | |
-|---|---|
-| `KEYSTORE_BASE64` | the base64 above |
-| `KEYSTORE_PASSWORD` | the store password |
-| `KEY_ALIAS` | `freeagent` |
-| `KEY_PASSWORD` | the key password |
+CI then generates a 4096-bit RSA key with `keytool`, encrypts it with that
+passphrase (`openssl enc -aes-256-cbc -pbkdf2 -iter 200000`), commits
+`android/release.jks.enc`, and signs the APK with it. The private key exists in
+the clear only on the runner, for the length of one job.
 
-Keep `release.jks` somewhere safe and out of the repo — `.gitignore` blocks
-`*.jks`, but losing it means never being able to update the installed app again.
+Every later run decrypts the same key, so Obtainium updates install in place.
 
-## Install
+### Why not a base64 secret
 
-1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases) (F-Droid or GitHub).
-2. Add app → `https://github.com/krausstt/freeagent`
-3. Obtainium finds the Release and installs the APK, then offers updates.
+The usual recipe pastes the whole keystore into `KEYSTORE_BASE64`. That means
+generating it on a machine with a JDK and pasting 4 KB of base64 into a form —
+awkward from a phone, which is where this project is actually administered. An
+encrypted blob in the repo needs one short secret instead, and is no less safe:
+the blob is useless without the passphrase.
 
-On first launch the app asks for your league ID and team ID. Schobbetruppe is
-public, so the cookie fields stay empty.
+### If the key is ever lost or rotated
 
-## Where the server still helps
-
-The app covers reading and deciding on your phone. A machine that stays awake
-still adds two things the phone cannot:
-
-- **Scheduled polling** while the phone sleeps, so the Saturday brief has data.
-- **A durable decision log**, pushed to git rather than living in one device's
-  app storage.
-
-Neither is required for the app to work. See `docs/PIPELINE.md`.
+The bootstrap step refuses to overwrite an existing `android/release.jks.enc`,
+because replacing it silently would break updates for an already-installed app.
+To rotate deliberately: delete that file, update the secret, uninstall the app
+from the phone, and bootstrap again.

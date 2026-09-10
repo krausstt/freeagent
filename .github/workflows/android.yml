@@ -11,18 +11,33 @@ on:
       - 'dashboard/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
+    inputs:
+      bootstrap_keystore:
+        description: 'One time only: create the app signing key'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+
+env:
+  # The signing key lives in the repo encrypted, not as a base64 secret. That
+  # way the only thing a phone has to type into GitHub is one password, and the
+  # private key never exists in the clear anywhere but the runner.
+  KEYSTORE_ENC: android/release.jks.enc
+  KEY_ALIAS: freeagent
 
 jobs:
   build:
     runs-on: ubuntu-latest
     # Hoisted here on purpose: the `secrets` context is not available in a step
     # `if`, and a step's own `env:` is not in scope for that step's `if` either.
-    # Job-level env is the only place this conditional can read from.
+    # Job-level env is the only place these conditionals can read from.
     env:
-      HAVE_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      HAVE_PASSPHRASE: ${{ secrets.KEYSTORE_PASSPHRASE != '' }}
+      DO_BOOTSTRAP: ${{ github.event.inputs.bootstrap_keystore == 'true' }}
+      DO_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
+      APP_VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,15 +64,55 @@ jobs:
         working-directory: android
         run: gradle --no-daemon --stacktrace assembleDebug
 
-      # Release signing only happens when the keystore secret exists. Without
-      # it we still ship a debug APK that installs, but Android refuses to
-      # update across differing signing keys, so the signed variant is the one
-      # Obtainium should track.
-      - name: Decode signing keystore
-        id: keystore
-        if: ${{ env.HAVE_KEYSTORE == 'true' }}
+      # ------------------------------------------------------------- signing
+      - name: Bootstrap the signing key (one time only)
+        if: ${{ env.DO_BOOTSTRAP == 'true' && env.HAVE_PASSPHRASE == 'true' }}
+        env:
+          PASSPHRASE: ${{ secrets.KEYSTORE_PASSPHRASE }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          set -euo pipefail
+          if [ -f "$KEYSTORE_ENC" ]; then
+            echo "::error::$KEYSTORE_ENC already exists. Replacing the signing key"
+            echo "::error::would break in-place updates for an already-installed app,"
+            echo "::error::so this refuses rather than doing it silently."
+            exit 1
+          fi
+          keytool -genkeypair -noprompt \
+            -keystore "$RUNNER_TEMP/release.jks" -storetype PKCS12 \
+            -storepass "$PASSPHRASE" -keypass "$PASSPHRASE" \
+            -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=FreeAgent, O=krausstt, C=DE"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in "$RUNNER_TEMP/release.jks" -out "$KEYSTORE_ENC" \
+            -pass env:PASSPHRASE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$KEYSTORE_ENC"
+          git commit -m "Add the encrypted app signing key" \
+                     -m "Generated on the runner and encrypted with the KEYSTORE_PASSPHRASE
+          secret, so the private key never leaves it in the clear and the repo stays
+          readable. Every later build decrypts this to sign, which is what lets
+          Android accept updates in place instead of demanding a reinstall."
+          git push
+          echo "Signing key created. Keep the KEYSTORE_PASSPHRASE secret: losing it"
+          echo "means no further updates can be installed over this app."
+
+      - name: Decrypt the signing key
+        id: keystore
+        if: ${{ env.HAVE_PASSPHRASE == 'true' }}
+        env:
+          PASSPHRASE: ${{ secrets.KEYSTORE_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$KEYSTORE_ENC" ]; then
+            echo "No signing key yet. Run this workflow once with"
+            echo "bootstrap_keystore = true to create one. Falling back to a"
+            echo "debug APK for this build."
+            exit 0
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in "$KEYSTORE_ENC" -out "$RUNNER_TEMP/release.jks" \
+            -pass env:PASSPHRASE
           echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
 
       - name: Build signed release APK
@@ -65,16 +120,34 @@ jobs:
         working-directory: android
         env:
           KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          APP_VERSION: 0.1.${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSPHRASE }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSPHRASE }}
         run: gradle --no-daemon --stacktrace assembleRelease
 
-      - name: Collect APKs
+      # --------------------------------------------------------------- publish
+      - name: Pick the one APK Obtainium should install
+        id: apk
         run: |
+          set -euo pipefail
           mkdir -p out
-          find android/app/build/outputs/apk -name '*.apk' -exec cp {} out/ \;
+          # Exactly one asset per release. Attaching both would leave Obtainium
+          # to guess, and picking the debug one puts an APK on the phone that
+          # Android then refuses to install over a signed build.
+          SRC="$(find android/app/build/outputs/apk -name 'app-release.apk' | head -1)"
+          KIND=signed
+          if [ -z "$SRC" ]; then
+            SRC="$(find android/app/build/outputs/apk -name 'app-debug.apk' | head -1)"
+            KIND=unsigned
+          fi
+          if [ -z "$SRC" ]; then
+            echo "::error::no APK was produced"
+            exit 1
+          fi
+          NAME="freeagent-v${APP_VERSION}.apk"
+          cp "$SRC" "out/$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          echo "Selected $SRC ($KIND) -> out/$NAME"
           ls -la out/
 
       - uses: actions/upload-artifact@v4
@@ -84,18 +157,27 @@ jobs:
           if-no-files-found: error
 
       - name: Publish release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ env.DO_RELEASE == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          APK_NAME: ${{ steps.apk.outputs.name }}
+          KIND: ${{ steps.apk.outputs.kind }}
         run: |
-          TAG="v0.1.${{ github.run_number }}"
-          gh release create "$TAG" out/*.apk \
+          set -euo pipefail
+          TAG="v${APP_VERSION}"
+          # Notes live in the repo rather than inline, so editing them does not
+          # mean editing YAML quoting.
+          {
+            sed "s/__VERSION__/${APP_VERSION}/g" "android/release-notes-${KIND}.md"
+            echo
+            echo "Built from ${GITHUB_SHA}."
+          } > "$RUNNER_TEMP/notes.md"
+          TITLE="FreeAgent $TAG"
+          if [ "$KIND" = unsigned ]; then
+            TITLE="FreeAgent $TAG (unsigned test build)"
+          fi
+          gh release create "$TAG" "out/$APK_NAME" \
             --repo "${{ github.repository }}" \
-            --title "FreeAgent $TAG" \
-            --notes "Automated build from ${{ github.sha }}.
-
-          Point Obtainium at this repository to install and track updates.
-
-          A debug-signed APK installs but cannot be updated in place, because
-          Android refuses updates across differing signing keys. Configure the
-          KEYSTORE_BASE64 secret to get an upgradeable signed build."
+            --title "$TITLE" \
+            --notes-file "$RUNNER_TEMP/notes.md"
+          echo "Released $TAG with out/$APK_NAME"
