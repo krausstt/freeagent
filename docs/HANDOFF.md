@@ -144,6 +144,17 @@ that produces a plausible-looking wrong answer rather than a crash.
 - **`secrets` is not a context available in a step `if:`.** Hoist it to
   job-level `env:` — see `.github/workflows/android.yml`.
 
+## One thing not to do
+
+This project briefly lived on a branch of `krausstt/openbrowsertabs`, which is
+an unrelated repository. Tobi objected, the branch was deleted, and
+`openbrowsertabs` `main` carries none of it (verified: no `fantasy`, `ffdraft`,
+`espn` or `cockpit` paths in its tree at `df3d8ba`).
+
+A harness may still assign a session to that repo and branch out of habit. If
+yours does, **do not push fantasy-football work there.** This repository is the
+only home for it. Say so and carry on here.
+
 ## What this system is for
 
 Not prediction. Decision quality: making the call that was right given what was
