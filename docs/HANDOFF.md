@@ -73,7 +73,10 @@ spend time debugging the 403; use `--from` with a saved payload instead.
 - `tools/league_map.py` without `--from`.
 - The Android app's native fetch bridge. The data *transform* is verified via a
   mocked bridge (it reproduces 117.5 and flags weeks 9 and 14); the actual
-  `HttpURLConnection` call to ESPN has never been observed succeeding.
+  `HttpURLConnection` call to ESPN has never been observed succeeding. The APK
+  now compiles, installs and is signed, but **nobody has yet confirmed it
+  successfully pulls the league on a real phone.** That is the next thing to
+  check, and it is the last unproven link in the whole chain.
 
 ## Not built
 
@@ -102,11 +105,11 @@ spend time debugging the 403; use `--from` with a saved payload instead.
 
 ## Blocked on Tobi
 
-- **APK signing.** One secret, `KEYSTORE_PASSPHRASE`, then one dispatch of the
-  Android APK workflow with `bootstrap_keystore` ticked. CI generates the key,
-  encrypts it into `android/release.jks.enc`, and signs every later build with
-  it. Until that happens releases carry a debug APK: installable, but
-  `debuggable` and not updatable in place. See `docs/APK.md`.
+- ~~APK signing.~~ **Done.** The key was bootstrapped on run 34702035928 and
+  lives encrypted at `android/release.jks.enc`; `KEYSTORE_PASSPHRASE` is set.
+  Release v0.1.5 is published and verified signed (APK Signing Block present, no
+  `debuggable` attribute, exactly one asset). To cut a new version: Actions →
+  Android APK → Run workflow, leave the bootstrap box unticked.
 - **Cookie rotation.** Live `espn_s2` / `SWID` values were pasted into a chat
   transcript. They are password-equivalent for the ESPN account. They were never
   written to disk and a secret scan confirms they never entered this repo, but
