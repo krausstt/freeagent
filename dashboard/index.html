@@ -63,6 +63,13 @@ h2{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-d
 .bar .me{background:var(--ok)}
 .bar .them{background:var(--line)}
 .blab{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim)}
+.blab .mono{font-variant-numeric:tabular-nums}
+
+/* data provenance -- never render numbers without saying how old they are */
+.prov{font-size:12px;margin-top:7px;padding:7px 10px;border-radius:var(--radius);
+  border:1px solid var(--line);background:var(--surface);color:var(--ink-dim)}
+.prov.stale{border-color:var(--warn,#b4883c);color:var(--ink)}
+.prov.bad{border-color:var(--bad,#c05b52);color:var(--ink)}
 
 /* coverage grid */
 .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
@@ -191,6 +198,7 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
     <div class="eyebrow">Schobbetruppe · 12 teams · 0.5 PPR</div>
     <h1>TheRealTobi — Season Command Center</h1>
     <div class="sub" id="sub">Season opens Thu 10 Sep 2026 · drafted from slot 7</div>
+    <div class="prov" id="prov" hidden></div>
   </header>
 
   <section>
@@ -202,13 +210,14 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
       </div>
       <div class="bar"><span class="me" id="barMe"></span><span class="them" id="barThem"></span></div>
       <div class="blab"><span id="wp">53% win probability</span><span id="edge">+3.5</span></div>
+      <div class="blab" id="liveRow" hidden style="margin-top:5px">
+        <span class="mono" id="liveMe"></span><span class="mono" id="liveThem"></span></div>
       <div class="mrow" style="margin-top:8px">
         <span class="mteam" style="color:var(--ink-dim)">Team 15 · A. Steinmeier</span>
         <span class="mscore mono" style="color:var(--ink-dim)" id="pa">114.0</span>
       </div>
     </div>
-    <p class="note">ESPN has not populated Week 1 D/ST projections yet — both defenses show 0.3,
-      so the real margin is wider than it looks on both sides.</p>
+    <p class="note" id="projNote" hidden></p>
   </section>
 
   <section>
@@ -293,6 +302,62 @@ $("wp").textContent = Math.round(D.week1.winProbability * 100) + "% win probabil
 $("edge").textContent = (pf - pa >= 0 ? "+" : "") + (pf - pa).toFixed(1);
 $("barMe").style.width = (D.week1.winProbability * 100) + "%";
 $("barThem").style.width = (100 - D.week1.winProbability * 100) + "%";
+
+// ---- data provenance
+// A decision-support view that silently renders two-week-old numbers is worse
+// than no view: it is confidently wrong at the moment a lineup is being set.
+// So every render states how old the data is, and seed data says so outright.
+(function(){
+  const el = $("prov"); if (!el) return;
+  const stamp = D._fetchedAt ? new Date(D._fetchedAt) : null;
+  if (!stamp || isNaN(stamp.getTime())){
+    const cap = D._capturedAt ? new Date(D._capturedAt) : null;
+    const when = cap && !isNaN(cap.getTime())
+      ? cap.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})
+      : "the build";
+    el.textContent = "Seed data from " + when + " — never refreshed from ESPN. "
+      + "Pre-season projections, not live numbers.";
+    el.className = "prov bad"; el.hidden = false;
+    return;
+  }
+  const mins = Math.max(0, Math.round((Date.now() - stamp.getTime()) / 60000));
+  const age = mins < 1 ? "just now"
+            : mins < 60 ? mins + " min ago"
+            : mins < 1440 ? Math.round(mins/60) + " h ago"
+            : Math.round(mins/1440) + " d ago";
+  el.textContent = "Live ESPN pull · " + age
+    + (D.currentWeek ? " · week " + D.currentWeek : "");
+  el.className = "prov" + (mins > 360 ? " stale" : "");
+  el.hidden = false;
+})();
+
+// ---- points scored, alongside the projection rather than instead of it
+// ESPN leads with the scored figure and this view leads with the projection.
+// Showing only one of them is what made the two apps look like they disagreed.
+(function(){
+  const sf = D.week1.scoredFor, sa = D.week1.scoredAgainst;
+  if (sf === null || sf === undefined) return;
+  $("liveMe").textContent = sf.toFixed(1) + " scored so far";
+  $("liveThem").textContent = (sa === null || sa === undefined) ? "" : sa.toFixed(1) + " scored";
+  $("liveRow").hidden = false;
+})();
+
+// ---- unpopulated projections: detected, not asserted
+// This replaces a hand-typed note claiming both defences would correct by a
+// similar amount. They did not -- the Steelers scored 27.0 and the opposing
+// defence 0.5 -- so the sentence was wrong in a way prose can never notice.
+(function(){
+  const el = $("projNote"); if (!el) return;
+  const FLOOR = {"D/ST":2.0, "K":3.0};   // below this, ESPN has not filled it in
+  const flagged = R.filter(r => r.slot !== "BE" && r.slot !== "IR"
+                             && FLOOR[r.p] !== undefined && r.w1 < FLOOR[r.p]);
+  if (!flagged.length) return;
+  el.textContent = flagged.map(r => r.n + " at " + r.w1.toFixed(1)).join(", ")
+    + (flagged.length > 1 ? " are" : " is")
+    + " showing an unpopulated ESPN projection, so your total above is understated. "
+    + "It is not a forecast that they will score nothing.";
+  el.hidden = false;
+})();
 
 // ---- coverage: spare players above requirement, per position per week
 function coverage(wk){

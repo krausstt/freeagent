@@ -85,7 +85,7 @@ are suppressed; projections are not precise enough to justify churn over noise.
 
 ## Tests
 
-48, all offline — no network, no credentials:
+48 Python, all offline — no network, no credentials:
 
 ```
 tests/test_engine.py      11   draft valuation, VORP, Jenks tiers, Monte Carlo
@@ -94,6 +94,12 @@ tests/test_brief.py        6   lineup swaps, noise suppression, bye alerts
 tests/test_journal.py      7   decision vs outcome, dedup, corrupt-line tolerance
 tests/test_league_map.py  19   positional strength, replacement level, trade logic
 ```
+
+Plus the Android transform, driven under Node against an ESPN-shaped payload
+carrying the real Week 1 figures from both apps (`node tests/test_app_transform.js`,
+20 assertions). It reproduces all four at once — 117.5 projected and 56.2 scored
+for this team, 124.02 and 63.8 for the opponent — which is the check that the two
+numbers people compared were different quantities, not a disagreement.
 
 Run them all: `for t in tests/test_*.py; do python3 "$t" || break; done`
 
